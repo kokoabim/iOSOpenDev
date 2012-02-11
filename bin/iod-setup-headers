@@ -24,7 +24,7 @@ export setCmd="set -eo pipefail"
 $setCmd
 
 export scriptName="${0##*/}"
-export scriptVer="1.0.2"
+export scriptVer="1.0.3"
 export iOSOpenDevPath="/opt/iOSOpenDev"
 
 export PATH=$iOSOpenDevPath/bin:$PATH
@@ -49,12 +49,15 @@ esac; done
 
 # clean up (ugly) pre-1.0.2 header dumps
 
-foundFiles=(`find "$iOSOpenDevPath/include/SpringBoard" -type f -name "*_iOSOpenDev_*.h"`)
-if [[ "${#foundFiles[@]}" != 0 ]]; then
-	for f in "${foundFiles[@]}"; do
-		rm "$f" || true # forget abou' it.
-	done
+if [[ -d "$iOSOpenDevPath/include/SpringBoard" ]]; then
+	foundFiles=(`find "$iOSOpenDevPath/include/SpringBoard" -type f -name "*_iOSOpenDev_*.h"`)
+	if [[ "${#foundFiles[@]}" != 0 ]]; then
+		for f in "${foundFiles[@]}"; do
+			rm -f "$f" || true # forget abou' it.
+		done
+	fi
 fi
+
 iosod rmheaders public "_iOSOpenDev_*"
 iosod rmheaders private "_iOSOpenDev_*"
 
