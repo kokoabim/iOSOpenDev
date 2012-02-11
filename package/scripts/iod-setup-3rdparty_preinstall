@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -e
+
+export iOSOpenDevPath="/opt/iOSOpenDev"
+
+[[ -d "$iOSOpenDevPath/bin" ]] || mkdir -p "$iOSOpenDevPath/bin"
+
+[[ -d "$iOSOpenDevPath/include" ]] || mkdir -p "$iOSOpenDevPath/include"
+
+[[ -d "$iOSOpenDevPath/lib" ]] || mkdir -p "$iOSOpenDevPath/lib"

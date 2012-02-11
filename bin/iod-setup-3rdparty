@@ -1,0 +1,229 @@
+#!/bin/bash
+
+# --------------------------------------------------------------------
+# iOSOpenDev -- iOS Open Development (@iOSOpenDev, www.iOSOpenDev.com)
+# Copyright (C) 2012 Spencer W.S. James <dev@iosopendev.com>
+# --------------------------------------------------------------------
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+# iOSOpenDev is an independent project and has not been authorized, sponsored, or otherwise approved by Apple Inc.
+# IOS is a registered trademark of Cisco.
+
+export setCmd="set -eo pipefail"
+$setCmd
+
+export scriptName="${0##*/}"
+export scriptVer="1.0.1"
+export iOSOpenDevPath="/opt/iOSOpenDev"
+
+export downloadUrlBase="http://iosopendev.googlecode.com/files"
+export tarName="3rdParty"
+export tarExt=".tar.gz"
+
+export tempDirsFile="`mktemp -d -t iosod`/tempdirs"
+touch "$tempDirsFile"
+
+unset LANG
+
+function cleanup() # no args
+{
+	local exitCode=$?
+	set +e
+	trap - $signals
+	
+	removeTempData
+	
+	exit $exitCode
+}
+export signals="0 1 2 3 15"
+trap cleanup $signals
+
+function panic() # args: exitCode, message
+{
+	local exitCode=$1
+	set +e
+	
+	[[ "$2" == "" ]] || \
+		echo "$2" >&2
+
+	exit $exitCode
+}
+
+# === functions === #
+
+function removeTempData() # no args
+{
+	local tempDirs
+	
+	if [[ -f "$tempDirsFile" ]]; then
+		tempDirs=(`cat "$tempDirsFile"`)
+		
+		for td in "${tempDirs[@]}"; do
+			rm -rf "$td" || true # forget abou' it.
+		done
+		
+		rm -rf "`dirname $tempDirsFile`" || true # forget abou' it.
+	fi
+}
+
+function getTempDir() # no args
+{
+	$setCmd
+	
+	local tempDir
+	
+	tempDir=`mktemp -d -t iosod` || \
+		panic $? "Failed to create temporary directory"
+
+	# remember the temp dir path; in cleanup() these are rm'd #
+	
+	echo "$tempDir" >> "$tempDirsFile" || \
+		panic $? "Failed to echo into temporary file $tempDirsFile"
+
+	# return #
+	echo "$tempDir"
+}
+
+function requireDir() # args: dirPath [, makeDirIfNotFound]
+{
+	local dirPath="$1"
+	local makeDirIfNotFound="$2"
+				
+	if [[ ! -d "$dirPath" ]]; then
+		if [[ $makeDirIfNotFound == true ]]; then
+			mkdir -p "$dirPath" || \
+				panic $? "Failed to create directory $dirPath"
+		else
+			panic 1 "Directory $dirPath not found"
+		fi
+	fi
+}
+
+function extractTar() # args: tarPath, outputPath
+{
+	local tarPath="$1"
+	local outputPath="$2"
+	
+	tar -C "$outputPath" -zxf "$tarPath" || \
+		panic $? "Failed to extract $tarPath to $outputPath"
+}
+
+function downloadFile() # args: sourceUrl, targetPath
+{
+	local sourceUrl="$1"
+	local targetPath="$2"
+	local curlPath
+
+	requireDir "${targetPath%/*}" true
+
+	curlPath=`which curl` || \
+		panic $? "Failed to get curl path"
+
+	"$curlPath" --silent --insecure --output "$targetPath" "$sourceUrl" || \
+		panic $? "Failed to download $sourceUrl to $targetPath"
+}
+
+function changeMode() # args: mode, target [, recursive]
+{
+	local mode="$1"
+	local target="$2"
+	local recursive="$3"
+	local options
+
+	[[ $recursive == false ]] || \
+		options="-R"
+
+	if [[ -e "$target" ]]; then
+		chmod $options "$mode" "$target" || \
+			panic $? "Failed to change mode to $mode on $target"
+	fi
+}
+
+function changeOwn() # args: ownerAndOrGroup, target [, recursive]
+{
+	local ownerAndOrGroup="$1"
+	local target="$2"
+	local recursive="$3"
+	local options
+	
+	[[ $recursive == false ]] || \
+		options="-R"
+		
+	if [[ -e "$target" ]]; then
+		chown $options "$ownerAndOrGroup" "$target" || \
+			panic $? "Failed to change ownership to $ownerAndOrGroup on $target"
+	fi
+}
+
+function changeOwnAndMode() # args: ownerGroup, mode, target
+{
+	local own="$1"
+	local mode="$2"
+	local target="$3"
+
+	changeOwn "$own" "$target"
+	changeMode "$mode" "$target"
+}
+
+function makeDir()
+{
+	local dirPath="$1"
+	
+	requireDir "$dirPath" true
+	changeOwnAndMode "0:0" 0755 "$dirPath"
+}
+
+# options #
+
+while [[ "$1" != "" ]]; do case "$1" in
+	-h|--help)
+		echo "iOSOpenDev -- setup 3rd party header and library files
+Usage: $scriptName"
+		exit 1
+	;;
+	*)
+		echo "Invalid option: $1"
+		exit 1
+	;;
+esac; done
+
+# start #
+
+# filesystem #
+
+echo "Creating directories..."
+makeDir "$iOSOpenDevPath"
+makeDir "$iOSOpenDevPath/include"
+makeDir "$iOSOpenDevPath/lib"
+
+# 3rd party header and library files #
+
+export tempDir=`getTempDir`
+
+echo "Downloading..."
+downloadFile "$downloadUrlBase/${tarName}${tarExt}" "$tempDir/${tarName}${tarExt}"
+
+echo "Extracting..."
+extractTar "$tempDir/${tarName}${tarExt}" "$tempDir"
+
+echo "Copying..."
+
+cp -R "$tempDir/$tarName/include/"* "$iOSOpenDevPath/include" || \
+	panic $? "Failed to copy $tempDir/$tarName/include/* to $iOSOpenDevPath/include"
+	
+cp -R "$tempDir/$tarName/lib/"* "$iOSOpenDevPath/lib" || \
+	panic $? "Failed to copy $tempDir/$tarName/lib/* to $iOSOpenDevPath/include"
+
+# finished #
+exit 0

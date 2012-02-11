@@ -1,0 +1,16 @@
+#!/bin/bash
+
+set -e
+
+export iOSOpenDevPath="/opt/iOSOpenDev"
+runThis="$iOSOpenDevPath/bin/iod-setup-environment"
+
+if [[ -f "$runThis" ]]; then
+	echo "Running $runThis..."
+	"$runThis"
+else
+	echo "Missing $runThis"
+	exit 1
+fi
+
+exit 0

@@ -1,0 +1,66 @@
+#!/bin/bash
+
+# --------------------------------------------------------------------
+# iOSOpenDev -- iOS Open Development (@iOSOpenDev, www.iOSOpenDev.com)
+# Copyright (C) 2012 Spencer W.S. James <dev@iosopendev.com>
+# --------------------------------------------------------------------
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+# iOSOpenDev is an independent project and has not been authorized, sponsored, or otherwise approved by Apple Inc.
+# IOS is a registered trademark of Cisco.
+
+export setCmd="set -eo pipefail"
+$setCmd
+
+export scriptName="${0##*/}"
+export scriptVer="1.0.2"
+export iOSOpenDevPath="/opt/iOSOpenDev"
+
+export PATH=$iOSOpenDevPath/bin:$PATH
+
+unset LANG
+
+# options #
+
+while [[ "$1" != "" ]]; do case "$1" in
+	-h|--help)
+		echo "iOSOpenDev -- dump public and private framework and SpringBoard header files
+Usage: $scriptName"
+		exit 1
+	;;
+	*)
+		echo "Invalid option: $1"
+		exit 1
+	;;
+esac; done
+
+# start #
+
+# clean up (ugly) pre-1.0.2 header dumps
+
+foundFiles=(`find "$iOSOpenDevPath/include/SpringBoard" -type f -name "*_iOSOpenDev_*.h"`)
+if [[ "${#foundFiles[@]}" != 0 ]]; then
+	for f in "${foundFiles[@]}"; do
+		rm "$f" || true # forget abou' it.
+	done
+fi
+iosod rmheaders public "_iOSOpenDev_*"
+iosod rmheaders private "_iOSOpenDev_*"
+
+# dump #
+
+iosod dumpall2sdk
+
+# finished #
+exit 0

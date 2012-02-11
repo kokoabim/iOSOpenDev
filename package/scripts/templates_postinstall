@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -e
+
+iOSOpenDevPath="/opt/iOSOpenDev"
+userDevDir="$HOME/Library/Developer"
+userTemplatesDir="$userDevDir/Xcode/Templates"
+
+if [[ ! -d "$userTemplatesDir" ]]; then
+	mkdir -p "$userTemplatesDir" true
+	chown -R "$USER:`id -g $USER`" "$userDevDir"
+fi
+
+ln -fhs "$iOSOpenDevPath/templates" "$userTemplatesDir/iOSOpenDev"
