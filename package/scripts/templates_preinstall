@@ -1,7 +1,0 @@
-#!/bin/bash
-
-set -e
-
-iOSOpenDevPath="/opt/iOSOpenDev"
-
-[[ -d "$iOSOpenDevPath/templates" ]] || mkdir -p "$iOSOpenDevPath/templates"

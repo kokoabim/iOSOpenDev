@@ -1,7 +1,0 @@
-#!/bin/bash
-
-set -e
-
-iOSOpenDevPath="/opt/iOSOpenDev"
-
-[[ -d "$iOSOpenDevPath/bin" ]] || mkdir -p "$iOSOpenDevPath/bin"
