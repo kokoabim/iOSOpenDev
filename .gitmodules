@@ -1,6 +1,0 @@
-[submodule "iOSOpenDev-Xcode-Templates"]
-	path = iOSOpenDev-Xcode-Templates
-	url = git@github.com:kokoabim/iOSOpenDev-Xcode-Templates.git
-[submodule "templates"]
-	path = templates
-	url = git@github.com:kokoabim/iOSOpenDev-Xcode-Templates.git
