@@ -25,7 +25,7 @@ export setCmd="set -eo pipefail"
 $setCmd
 
 export scriptName=`basename $0`
-export scriptVer="1.0.2"
+export scriptVer="1.0.3"
 export originalArguments=("$@")
 export activeActionArg
 
@@ -1044,7 +1044,7 @@ function dumpSDKHeaders() # args: dumpWhat, outputDirectory [, useZOption] [, us
 		classDumpArgs="--sdk-ios $iosSdkVersion"
 	else
 		classDumpBin="class-dump-z"
-		classDumpArgs="-pabkkAR -X NS,CF -y $iosSdkPath"
+		classDumpArgs="-pabkkAR -X NS,CF,CG -y $iosSdkPath"
 	fi
 	
 	classDumpBin="`which $classDumpBin`" || \
@@ -1054,9 +1054,9 @@ function dumpSDKHeaders() # args: dumpWhat, outputDirectory [, useZOption] [, us
 	
 	processDirToDumpSDKHeaders "$sourceBasePath" "$sourceBasePath" "$outputDirectory" $dontUseHeadersDir
 
-	if [[ $useIOption != "true" && $dumpWhat != "springboard" ]]; then
+	if [[ $useIOption != "true" ]]; then
 		echo "Fixing import statements..."
-		fixDumpedFwImports "$outputDirectory"
+		cleanUpDumpedHeaderFiles "$outputDirectory" "$dumpWhat"
 	fi
 }
 
@@ -1095,9 +1095,10 @@ function processDirToDumpSDKHeaders() # args: pathToTrimOffFromTargetHeaderFileP
 	done
 }
 
-function fixDumpedFwImports() # args: baseDir
+function cleanUpDumpedHeaderFiles() # args: baseDir [, forWhat]
 {
 	local baseDir="$1"
+	local forWhat="$2"
 	local removals=("NSObject\\.h" "NSString\\.h")
 	local r
 	local files
@@ -1110,8 +1111,16 @@ function fixDumpedFwImports() # args: baseDir
 	local fileName
 	local origFileContents
 	local newFileContents
+	local fName
+	
+	# springboard only: move XXUnknownSuperclass.h to SBUnknownSuperclass.h
+	
+	if [[ $forWhat == "springboard" && -f "$baseDir/XXUnknownSuperclass.h" ]]; then
+		mv -f "$baseDir/XXUnknownSuperclass.h" "$baseDir/SBUnknownSuperclass.h" || \
+			panic $? "Failed to move $baseDir/XXUnknownSuperclass.h to $baseDir/SBUnknownSuperclass.h"
+	fi
 
-	# defined removals
+	# remove imports (in $removals)
 	
 	for r in "${removals[@]}"; do
 		set +e
@@ -1124,10 +1133,11 @@ function fixDumpedFwImports() # args: baseDir
 		done
 	done
 	
-	# cycle files
+	# iterate through all files
 	
 	files=(`find "$baseDir" -name '*.h'`)
 	for f in "${files[@]}"; do
+		fName="${f##*/}"
 		fileDir="${f%/*}"
 		fwDirBaseName="${f%.framework/*}"
 		fwName="${fwDirBaseName##*/}"
@@ -1136,23 +1146,72 @@ function fixDumpedFwImports() # args: baseDir
 			panic $? "Failed to cat $f"
 		newFileContents="$origFileContents"
 
-		# change "quoted" imports to <framework> imports
-		
-		set +e
-		imports=(`grep -Pio "#import[\\s]+\"[^/]+\"" "$f"`)
-		set -e
-		
-		for i in "${imports[@]}"; do
-			if [[ "$i" == \"*\" ]]; then
-				fileName=${i//\"/}
-				if [[ -f "$fileDir/$fileName" ]]; then
-					newFileContents=`echo "$newFileContents" | sed "s/^[[:space:]]*#import[[:space:]]*\"$fileName\"/#import \<$fwName\/$fileName\>/g"` || \
-						panic $? "Failed to echo into sed"
+		if [[ $forWhat != "springboard" ]]; then
+			# change "headerfile.h" imports to <framework/headerfile.h> imports (if headerfile.h exists in framework's directory)
+			
+			set +e
+			imports=(`grep -Pio "#import[\\s]+\"[^/]+\"" "$f"`)
+			set -e
+			
+			for i in "${imports[@]}"; do
+				if [[ "$i" == \"*\" ]]; then
+					fileName=${i//\"/}
+					if [[ -f "$fileDir/$fileName" ]]; then
+						newFileContents=`echo "$newFileContents" | sed "s/^#import *\"$fileName\"/#import \\<$fwName\\/$fileName\\>/g"` || \
+							panic $? "Failed to echo into sed"
+					fi
 				fi
-			fi
-		done
+			done
+		fi
+				
+		# address XXUnknownSuperclass
+
+		if [[ -f "$fileDir/XXUnknownSuperclass.h" ]] || [[ $forWhat == "springboard" && -f "$fileDir/SBUnknownSuperclass.h" ]]; then
 		
-		# rewrite file? #
+			# XXUnknownSuperclass.h found ...
+			
+			if [[ $forWhat != "springboard" ]]; then
+				# change <XXUnknownSuperclass.h> to <framework/XXUnknownSuperclass.h>
+				newFileContents=`echo "$newFileContents" | sed "s/^#import *\\<XXUnknownSuperclass\\.h\\>\( *\\/\\/ *Unknown library\)/#import \\<${fwName}\\/XXUnknownSuperclass\\.h\\>/g"` || \
+					panic $? "Failed to echo into sed"
+					
+			else
+				# change <XXUnknownSuperclass.h> to "SBUnknownSuperclass.h"
+				newFileContents=`echo "$newFileContents" | sed "s/^#import *\\<XXUnknownSuperclass\\.h\\>\( *\\/\\/ *Unknown library\)/#import \\"SBUnknownSuperclass\\.h\\"/g"` || \
+					panic $? "Failed to echo into sed"
+
+				# change XXUnknownSuperclass to SBUnknownSuperclass
+				newFileContents=`echo "$newFileContents" | sed "s/XXUnknownSuperclass/SBUnknownSuperclass/g"` || \
+					panic $? "Failed to echo into sed"					
+			fi
+		else
+			# XXUnknownSuperclass.h not found ...
+			
+			# remove import of <XXUnknownSuperclass.h>
+			newFileContents=`echo "$newFileContents" | sed "s/^#import *\\<XXUnknownSuperclass\\.h\\>\( *\\/\\/ *Unknown library\)//g"` || \
+				panic $? "Failed to echo into sed"
+
+			# replace XXUnknownSuperclass with NSObject
+			newFileContents=`echo "$newFileContents" | sed "s/ *: *XXUnknownSuperclass */ : NSObject /g"` || \
+				panic $? "Failed to echo into sed"
+		fi
+		
+		# TODO: insert (XX|SB)UnknownSuperclass interface
+		
+		#if [[ $fName == "XXUnknownSuperclass.h" ]]; then
+		
+		#	"@interface XXUnknownSuperclass : NSObject"
+		#	"@end"
+			
+		#elif [[ $forWhat == "springboard" && $fName == "SBUnknownSuperclass.h" ]]; then
+
+		#	"@interface SBUnknownSuperclass : NSObject"
+		#	"@end"
+		
+		#fi
+		
+		# rewrite file (if changed)
+		
 		[[ $origFileContents == "$newFileContents" ]] || \
 			echo "$newFileContents" > "$f" || \
 				panic $? "Failed to echo into $f"
@@ -1261,7 +1320,7 @@ function dumpAllHeaders() # args: [useZOption] [, useIOption]
 	
 	dumpAndCopyHeaders "public" "" "$useZOption" "$useIOption"
 	dumpAndCopyHeaders "private" "" "$useZOption" "$useIOption"
-	dumpAndCopyHeaders "springboard" "" "$useZOption" "true"
+	dumpAndCopyHeaders "springboard" "" "$useZOption" "$useIOption"
 }
 
 # === run (Action) === #
@@ -1396,6 +1455,8 @@ function xcodeBuildPhase() # no args
 	
 	if [[ "$MACH_O_TYPE" == "staticlib" && "$CODE_SIGN_IDENTITY" == "" ]]; then
 		echo "Skipping signing (since ldid would be used and it fails on static libraries)"
+	elif [[ "$PLATFORM_NAME" != "iphoneos" ]]; then
+		echo "Skipping signing (since platform is not iphoneos)"
 	else
 		signCode "$builtExecutable" "$CODE_SIGN_IDENTITY"
 	fi
