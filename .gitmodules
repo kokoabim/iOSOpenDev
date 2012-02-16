@@ -1,3 +1,6 @@
 [submodule "templates"]
 	path = templates
 	url = git://github.com/kokoabim/iOSOpenDev-Xcode-Templates.git
+[submodule "frameworks"]
+	path = frameworks
+	url = git://github.com/kokoabim/iOSOpenDev-Framework-Header-Files.git
