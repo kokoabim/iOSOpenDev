@@ -4,7 +4,6 @@
 # iOSOpenDev -- iOS Open Development (http://www.iOSOpenDev.com)
 # Copyright (C) 2012 Spencer W.S. James <dev@iosopendev.com>
 # --------------------------------------------------------------
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -16,15 +15,17 @@
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
+# --------------------------------------------------------------
 # iOSOpenDev is an independent project and has not been authorized, sponsored, or otherwise approved by Apple Inc.
-# IOS is a registered trademark of Cisco.
-# iPhone and Xcode are registered trademarks of Apple Inc.
+# IOS is a registered trademark of Cisco and is used under license by Apple Inc.
+# --------------------------------------------------------------
 
 export setCmd="set -eo pipefail"
 $setCmd
 
-export scriptName=`basename $0`
+# script #
+
+export scriptName="${0##*/}"
 export scriptVer="1.0.3"
 export originalArguments=("$@")
 export activeActionArg
@@ -40,6 +41,12 @@ export tempDirsFile="`mktemp -d -t iosod`/tempdirs"
 touch "$tempDirsFile"
 
 unset LANG
+
+# development tools #
+
+xcodeAsAppPath="/Applications/Xcode.app/Contents/Developer"
+[[ ! -d "$xcodeAsAppPath" ]] || \
+	export DEVELOPER_DIR="$xcodeAsAppPath"
 
 # === "actions" === #
 
@@ -60,7 +67,7 @@ export ActionProperty_RequireSudo=6
 export ActionProperty_LongUsage=7
 
 export Action_SignCode=("sign" "[-i identity] executable_file" "i:" 1 1 signCode false \
-"        Add code signature to <executable_file>. If <identity> is ommitted,
+"        Add code signature to <executable_file>. If <identity> is omitted,
         ldid is used. If <identity> is provided, codesign is used and the
         certificate of the matching digital identity in the Keychain is used.")
 
@@ -72,20 +79,20 @@ export Action_BuildPackage=("build" "[-p version_plist] [-z] package_directory o
 
 export Action_InstallPackage=("install" "[-h host_address] package_file" "h:" 1 1 managePackageOnDevice false \
 "        Install <package_file> on device at <host_address>. If <host_address> is
-        ommitted, the environment variable iOSOpenDevDevice is used.")
+        omitted, the environment variable iOSOpenDevDevice is used.")
 
 export Action_RemovePackage=("remove" "[-h host_address] package_name" "h:" 1 1 managePackageOnDevice false \
 "        Remove <package_name> from device at <host_address>. If <host_address>
-        is ommitted, the environment variable iOSOpenDevDevice is used.")
+        is omitted, the environment variable iOSOpenDevDevice is used.")
 
 export Action_PurgePackage=("purge" "[-h host_address] package_name" "h:" 1 1 managePackageOnDevice false \
 "        Purge <package_name> from device at <host_address>. If <host_address> is
-        ommitted, the environment variable iOSOpenDevDevice is used.")
+        omitted, the environment variable iOSOpenDevDevice is used.")
 
 export Action_DumpSDKHeaders=("dump" "[-i] [-z] framework_type output_directory" "iz" 2 2 dumpSDKHeaders false \
 "        Generate header files of the specified iOS SDK <framework_type> of its
         classes, categories and protocols in <output_directory>. If <z> is
-        ommitted, class-dump-z is used. If <z> is used, class-dump is used. If
+        omitted, class-dump-z is used. If <z> is used, class-dump is used. If
         <i> is provided, import statements are not converted from \"header.h\"
         to <framework_name/header.h>. All import statements, if the imported
         header file exists in the framework being processed, are converted to
@@ -133,7 +140,7 @@ export Action_CopyHeadersToSDK=("cp2sdk" "[-t header_tag] framework_type source_
 export Action_DumpAndCopyHeaders=("dump2sdk" "[-i] [-z] [-t header_tag] framework_type" "it:z" 1 1 dumpAndCopyHeaders true \
 "        Generate and copy header files of the specified iOS SDK
         <framework_type>, tagging each header file with <header_tag>, if
-        provided. If <z> is ommitted, class-dump-z is used. If <z> is used,
+        provided. If <z> is omitted, class-dump-z is used. If <z> is used,
         class-dump is used. If <i> is provided, import statements are not
         converted from \"header.h\" to <framework_name/header.h>.
         
@@ -172,8 +179,8 @@ export Action_RemoveCopiedHeaders=("rmheaders" "framework_type header_tag" "" 2 
 export Action_AddSshKeyToDevice=("sshkey" "[-h host_address] [-r]" "h:r" 0 0 addSshKeyToDevice false \
 "        Add the local user's public SSH authentication key as an authorized key
         to the root account of the device at <host_address>. If <host_address>
-        is ommitted, the environment variable iOSOpenDevDevice is used. If <r>
-        is ommitted, the current user is used. If <r> is used, root is used.
+        is omitted, the environment variable iOSOpenDevDevice is used. If <r>
+        is omitted, the current user is used. If <r> is used, root is used.
         If the local user does not already have a SSH authentication key then
         one will be generated and the passphrase to set for it will be asked.
         Adding a user's public SSH authentication key as an authorized key will
@@ -185,17 +192,17 @@ export Action_AddSshKeyToDevice=("sshkey" "[-h host_address] [-r]" "h:r" 0 0 add
 
 export Action_DumpAllHeaders=("dumpall2sdk" "[-i] [-z]" "iz" 0 0 dumpAllHeaders true \
 "        Generate and copy header files of the iOS SDK framework types public,
-        private and springboard. If <z> is ommitted, class-dump-z is used. If
+        private and springboard. If <z> is omitted, class-dump-z is used. If
         <z> is used, class-dump is used. If <i> is provided, import statements
         are not converted from \"header.h\" to <framework_name/header.h>.")
 
 export Action_RunCmdOnDevice=("run" "[-h host_address] command ..." "h:" 0 2048 runCmdOnDevice false \
 "        Run <command> on device at <host_address>. If <host_address> is
-        ommitted, the environment variable iOSOpenDevDevice is used.")
+        omitted, the environment variable iOSOpenDevDevice is used.")
 
 export Action_RunFuncOnDevice=("func" "[-h host_address] function" "h:" 1 1 runFuncOnDevice false \
 "        Perform <function> on device at <host_address>. If <host_address> is
-        is ommitted, the environment variable iOSOpenDevDevice is used.
+        is omitted, the environment variable iOSOpenDevDevice is used.
 
         Available functions:
             respring, reboot")
@@ -428,7 +435,7 @@ function getSdkProperty() # args: sdk, propertyName
 
 	local sdk="$1"
 	local propertyName="$2"
-	
+
 	propertyValue=`xcodebuild -version -sdk $sdk $propertyName` || \
 		panic $? "Failed to get $sdk SDK property $propertyName"
 		
@@ -498,7 +505,7 @@ function signCode() # args: executableToSign, identityToSignWith
 	local cmdBin
 	local cmdArg
 	local codesignAllocatePath
-	
+
 	# process arguments #
 	
 	requireFile "$executableToSign" false
@@ -1197,17 +1204,12 @@ function cleanUpDumpedHeaderFiles() # args: baseDir [, forWhat]
 		fi
 		
 		# TODO: insert (XX|SB)UnknownSuperclass interface
-		
 		#if [[ $fName == "XXUnknownSuperclass.h" ]]; then
-		
 		#	"@interface XXUnknownSuperclass : NSObject"
 		#	"@end"
-			
 		#elif [[ $forWhat == "springboard" && $fName == "SBUnknownSuperclass.h" ]]; then
-
 		#	"@interface SBUnknownSuperclass : NSObject"
 		#	"@end"
-		
 		#fi
 		
 		# rewrite file (if changed)
