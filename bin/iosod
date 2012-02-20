@@ -18,18 +18,19 @@
 # --------------------------------------------------------------
 # iOSOpenDev is an independent project and has not been authorized, sponsored, or otherwise approved by Apple Inc.
 # IOS is a registered trademark of Cisco and is used under license by Apple Inc.
+# Xcode is a registered trademark of Apple Inc.
 # --------------------------------------------------------------
 
 export setCmd="set -eo pipefail"
 $setCmd
 
 # path #
-export PATH=/opt/iOSOpenDev/bin:/opt/local/bin:/opt/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH
+export PATH=/opt/iOSOpenDev/bin:/opt/theos/bin:/opt/local/bin:/opt/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH
 
 # script #
 
 export scriptName="${0##*/}"
-export scriptVer="1.0.4"
+export scriptVer="1.1"
 export originalArguments=("$@")
 export activeActionArg
 
@@ -59,7 +60,7 @@ export ActionNames=( \
 	"RunCmdOnDevice" "RunFuncOnDevice" \
 	"DumpSDKHeaders" "CopyHeadersToSDK" "DumpAndCopyHeaders" "DownloadRBHeaders" "DownloadAndCopyRBHeaders" "RemoveCopiedHeaders" "DumpAllHeaders" \
 	"AddSshKeyToDevice" \
-	"XcodeBuildPhase" "Help")
+	"XcodeBuildPhase" "XcodeBuildPhaseLogos" "Help")
 export ActionProperty_ShortArg=0
 export ActionProperty_ShortUsage=1
 export ActionProperty_Options=2
@@ -209,6 +210,10 @@ export Action_RunFuncOnDevice=("func" "[-h host_address] function" "h:" 1 1 runF
 
         Available functions:
             respring, reboot")
+
+export Action_XcodeBuildPhaseLogos=("--xcbp-logos" "" "" 0 0 xcodeBuildPhase_Logos false \
+"        DO NOT USE. For use by Xcode as a Build Phase for projects created from
+        iOSOpenDev templates only.")
 
 export Action_XcodeBuildPhase=("--xcbp" "" "" 0 0 xcodeBuildPhase false \
 "        DO NOT USE. For use by Xcode as a Build Phase for projects created from
@@ -1396,7 +1401,117 @@ function requireSudo() # args: ...
 	fi
 }
 
-# === Xcode Build Phase === #
+# === xcbp-logos === #
+
+function doesFileContain()
+{
+	$setCmd
+	
+	local filePath="$1"
+	local pattern="$2"
+	local grepReturn
+	local funcReturn
+	
+	set -e
+	grep -Piq "$pattern" "$filePath" || grepReturn=$?
+	set +e
+
+	if [[ $grepReturn == "" || $grepReturn == 0 ]]; then # contains
+		funcReturn=true
+	elif [[ $grepReturn == 1 ]]; then # doesn't contain
+		funcReturn=false
+	else # error
+		panic $grepReturn "Failed to grep $filePath"
+	fi
+	
+	# return #
+	echo $funcReturn
+}
+
+function xcodeBuildPhase_Logos() # no args
+{
+	[[ "$ACTION" == "build" ]] || \
+		panic 1 "For Xcode Build Phase use only"
+	
+	echo "Preparing to run Xcode Build Phase for Logos Processor..."
+
+	# process environment variables
+
+	local pbxProjectFilePath="$PROJECT_FILE_PATH/project.pbxproj"
+	local logosProcessor
+	local projectFileModified=false
+	local projectContainsXmFiles
+	local lastKnownXmFileTypeNotObjCpp
+	local xmFileLangSpecNotObjCpp
+	local projectXmFiles
+	local logosStdErr
+	
+	# verify use
+	
+	[[ -f "$pbxProjectFilePath" ]] || \
+		panic 1 "Xcode project file not found: $pbxProjectFilePath"
+	
+	logosProcessor=`which logos.pl` || \
+		panic $? "Failed to locate Logos Processor. Is Theos installed? If not, see http://iphonedevwiki.net/index.php/Theos/Getting_Started."
+	
+	# for *.xm project files, set known file-type and language specifications to Objective-C++
+	
+	projectContainsXmFiles=`doesFileContain "$pbxProjectFilePath" '\/\* .+\.xm \*\/ *= *\{.*?isa *= *PBXFileReference\b'`
+	
+	if [[ $projectContainsXmFiles == "true" ]]; then
+	
+		lastKnownXmFileTypeNotObjCpp=`doesFileContain "$pbxProjectFilePath" '\/\* .+\.xm \*\/ *= *\{.*?isa *= *PBXFileReference\b[^\}]*?\blastKnownFileType *= *text\b'`
+	
+		if [[ $lastKnownXmFileTypeNotObjCpp == "true" ]]; then
+			echo "Modifying Xcode project file: setting *.xm file-types to Objective-C++..."
+			
+			perl -i -pe 's/^(.*\/\* .+\.xm \*\/ *= *{.*?isa *= *PBXFileReference\b[^}]*?\blastKnownFileType *= *)[^;]+(.*)$/\1sourcecode.cpp.objcpp\2/g' "$pbxProjectFilePath" || \
+				panic $? "Failed to modify Xcode project file"
+	
+			projectFileModified=true
+		fi
+	
+		xmFileLangSpecNotObjCpp=`perl -ne 'if ($_ =~ /\/\* .+\.xm \*\/ *= *\{.*?isa *= *PBXFileReference\b/ && $_ !~ /\bxcLanguageSpecificationIdentifier *= *xcode\.lang\.objcpp\b/) { print "true"; exit; }' "$pbxProjectFilePath"` || \
+			panic $? "Failed to execute perl on $pbxProjectFilePath"
+	
+		if [[ $xmFileLangSpecNotObjCpp == "true" ]]; then
+			echo "Modifying Xcode project file: setting *.xm language to Objective-C++..."
+			
+			perl -i -pe 'if ($_ =~ /\/\* .+\.xm \*\/ *= *\{.*?isa *= *PBXFileReference\b/ && $_ !~ /\bxcLanguageSpecificationIdentifier *= *xcode\.lang\.objcpp\b/) { s/^(.*\/\* .+\.xm \*\/ *= *{.*?isa *= *PBXFileReference\b[^}]*)(.*)$/\1xcLanguageSpecificationIdentifier = xcode.lang.objcpp; \2/g; }' "$pbxProjectFilePath" || \
+				panic $? "Failed to modify Xcode project file"
+		
+			projectFileModified=true
+		fi
+	fi
+	
+	if [[ $projectFileModified == "true" ]]; then
+		echo "DON'T WORRY, EVERYTHING IS OK!"
+		echo "The Xcode project file was modified to provide better *.xm file support."
+		echo "To dismiss this build error, just perform the build again."
+		panic 1
+	fi
+	
+	# for each *.xm project file, use Logos Processor to generate *.mm file
+	
+	projectXmFiles=($(perl -ne 'if ($_ =~ /\/\* (.+\.xm) \*\/ *= *{.*?isa *= *PBXFileReference\b/) { print "$1\n"; }' "$pbxProjectFilePath"))
+	
+	for f in "${projectXmFiles[@]}"; do
+		echo "Logos Processor: $f -> ${f%.*}.mm..."
+
+		logosStdErr=$(("$logosProcessor" "$PROJECT_DIR/$TARGET_NAME/$f" > "$PROJECT_DIR/$TARGET_NAME/${f%.*}.mm") 2>&1) || \
+			panic $? "Failed Logos Processor"
+	
+		[[ $logosStdErr == "" ]] || \
+			panic 1 "Logos Processor outputted: $logosStdErr"
+	done
+
+	echo "Note: If any *.xm file generated above by the Logos Processor (${projectXmFiles[@]}) is not being compiled below, then you must add it to the Xcode project to be compiled."
+
+	# success #
+	echo "Xcode Build Phase for Logos Processor complete."
+}
+
+# === xcbp (action) === #
 
 function xcodeBuildPhase() # no args
 {
@@ -1544,6 +1659,7 @@ function showUsageAndExit() # args: showEverything
 	local showEverything="$1"
 	local n
 	
+	echo "$scriptName (v$scriptVer) -- iOSOpenDev Command-line Tool"
 	echo "Usages:"
 	
 	for n in "${ActionNames[@]}"; do
@@ -1674,6 +1790,9 @@ case "${activeActionArg[$ActionProperty_ShortArg]}" in
 		"${activeActionArg[$ActionProperty_Function]}" "$@" "$Opt_h"
 	;;
 	${Action_XcodeBuildPhase[$ActionProperty_ShortArg]})
+		"${activeActionArg[$ActionProperty_Function]}"
+	;;
+	${Action_XcodeBuildPhaseLogos[$ActionProperty_ShortArg]})
 		"${activeActionArg[$ActionProperty_Function]}"
 	;;
 esac
