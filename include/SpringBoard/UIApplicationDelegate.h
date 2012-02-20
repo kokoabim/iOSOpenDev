@@ -11,7 +11,9 @@
 
 @protocol UIApplicationDelegate <NSObject>
 @optional
+/* iOSOpenDev: commented-out (since already defined in SDK)
 @property(retain, nonatomic) UIWindow *window;
+*/
 - (void)applicationDidFinishLaunching:(id)application;
 - (BOOL)application:(id)application didFinishLaunchingWithOptions:(id)options;
 - (void)applicationDidBecomeActive:(id)application;
