@@ -30,7 +30,7 @@ export PATH=/opt/iOSOpenDev/bin:/opt/theos/bin:/opt/local/bin:/opt/local/sbin:/u
 # script #
 
 export scriptName="${0##*/}"
-export scriptVer="1.1"
+export scriptVer="1.2"
 export originalArguments=("$@")
 export activeActionArg
 
@@ -1535,7 +1535,7 @@ function xcodeBuildPhase() # no args
 	local packageFileName
 	
 	local packageInstallSource
-	if [[ $MACH_O_TYPE != "mh_bundle" ]]; then
+	if [[ $SHALLOW_BUNDLE != "YES" ]]; then
 		packageInstallSource="$TARGET_BUILD_DIR/$EXECUTABLE_PATH"
 	else
 		packageInstallSource="$TARGET_BUILD_DIR/$EXECUTABLE_FOLDER_PATH"
