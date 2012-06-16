@@ -30,7 +30,7 @@ export PATH=/opt/iOSOpenDev/bin:/opt/theos/bin:/opt/local/bin:/opt/local/sbin:/u
 # script #
 
 export scriptName="${0##*/}"
-export scriptVer="1.2"
+export scriptVer="1.3"
 export originalArguments=("$@")
 export activeActionArg
 
@@ -41,7 +41,7 @@ export userGroup=`id -g $userName`
 export userHome=`eval echo ~$userName`
 export bashProfileFiles=("$userHome/.bash_profile" "$userHome/.bash_login" "$userHome/.profile")
 
-export tempDirsFile="`mktemp -d -t iosod`/tempdirs"
+export tempDirsFile="`mktemp -d -t $scriptName`/tempdirs"
 touch "$tempDirsFile"
 
 unset LANG
@@ -362,26 +362,6 @@ function requireFile() # args: filePath [, touchFileIfNotFound]
 	fi
 }
 
-function grepFileForValue() # args: pattern, filePath
-{
-	$setCmd
-	
-	local pattern="$1"
-	local filePath="$2"
-	local grepExit
-	local value
-	
-	set +e
-	value=`grep -Poi "$pattern" "$filePath"` || grepExit=$?
-	set -e
-	
-	[[ $grepExit != 2 ]] || \
-		panic $grepExit "Failed to grep $filePath"
-
-	# return #
-	echo "$value"
-}
-
 function requireExportedVariable() # args: envVarName[, message]
 {
 	local envVarName="$1"
@@ -456,19 +436,16 @@ function getBashProfileEnvVarValue() # args: envVarName
 	$setCmd
 
 	local envVarName="$1"
-	local grepValue
-	local sedValue
+	local perlValue
 	local bashProfileFile
 	
 	bashProfileFile=`determineBashProfileFile`
 	
-	grepValue=`grepFileForValue "^(export)? *$envVarName=.*$" $bashProfileFile`
-	
-	sedValue=`echo "$grepValue" | sed -E "s/^(export)? *$envVarName=//g"` || \
-		panic $? "Failed to pipe echo into sed"
+	perlValue=`perl -ne 'print $1 if /^(?:export)? *'"$envVarName"'=(.*)$/' "$bashProfileFile"` || \
+		panic $? "Failed to perl"
 	
 	# return #
-	echo "$sedValue"
+	echo "$perlValue"
 }
 
 function getTempDir() # no args
@@ -477,7 +454,7 @@ function getTempDir() # no args
 	
 	local tempDir
 	
-	tempDir=`mktemp -d -t iosod` || \
+	tempDir=`mktemp -d -t $scriptName` || \
 		panic $? "Failed to create temporary directory"
 
 	# remember the temp dir path; in cleanup() these are rm'd #
@@ -620,23 +597,26 @@ function setControlFileVersionFieldUsingVersionPList() # args: controlFile, plis
 	echo "Done."
 }
 
-function getControlFieldValue() # args: controlFile, fieldName
+function getControlFieldValue() # args: controlFile, fieldName [, isRequired]
 {
 	$setCmd
 	
 	local controlFile="$1"
-	local fieldName="$2"	
-	local grepValue
-	local sedValue
+	local fieldName="$2"
+	local isRequired="$3"
+	local perlValue
 		
-	grepValue=`grepFileForValue "^$fieldName:.*$" "$controlFile"`
-	
-	sedValue=`echo "$grepValue" | sed "s/^$fieldName: *//g"` || \
-		panic $? "Failed to pipe echo into sed"
+	perlValue=`perl -ne 'print $1 if /^'"$fieldName"': *(.*) *$/' "$controlFile"` || \
+		panic $? "Failed perl command using $controlFile"
 
+	if [[ "$perlValue" == "" ]] && [[ "$isRequired" == "true" ]]; then
+		panic 1 "Missing control field: $fieldName"
+	fi
+	
 	# return #
-	echo "$sedValue"
+	echo "$perlValue"
 }
+
 
 function getPackageFileNameUsingControlFile() # args: controlFile
 {
@@ -647,9 +627,9 @@ function getPackageFileNameUsingControlFile() # args: controlFile
 	local pkgVer
 	local pkgArch
 		
-	pkgId=`getControlFieldValue "$controlFile" Package`
-	pkgVer=`getControlFieldValue "$controlFile" Version`
-	pkgArch=`getControlFieldValue "$controlFile" Architecture`
+	pkgId=`getControlFieldValue "$controlFile" Package true`
+	pkgVer=`getControlFieldValue "$controlFile" Version true`
+	pkgArch=`getControlFieldValue "$controlFile" Architecture true`
 
 	# return #
 	echo "${pkgId}_${pkgVer}_${pkgArch}"
@@ -664,7 +644,6 @@ function buildPackage() # args: packageDir, outputDir, versionPList [, useZOptio
 	local subFileControlTxtToRemove="$packageDir/DEBIAN/control.txt"
 	local subFilesToRemove=(".DS_Store" "0xdeadfa11")
 	local packageFileName
-	local dpkgdebPath
 	local packageName
 	local zipFileName
 	
@@ -679,10 +658,7 @@ function buildPackage() # args: packageDir, outputDir, versionPList [, useZOptio
 	[[ "$versionPList" == "" ]] || \
 		requireFile "$versionPList" false
 
-	dpkgdebPath=`which dpkg-deb` || \
-		panic $? "Failed to get dpkg-deb path"
-
-	# clean package sub-directories #
+	# cleanup #
 
 	[[ ! -f "$subFileControlTxtToRemove" ]] || \
 		rm -f "$subFileControlTxtToRemove" || \
@@ -693,10 +669,7 @@ function buildPackage() # args: packageDir, outputDir, versionPList [, useZOptio
 			panic $? "Failed to remove file $f"
 	done
 
-	# works on 10.7 but not 10.6:
-	xattr -crs "$packageDir" || true # forget abou' it
-
-	# correct file modes #
+	xattr -crs "$packageDir" || true # forget abou' it (does not work on 10.6)
 
 	changeMode 0644 "$packageDir/DEBIAN/control"
 	changeMode 0755 "$packageDir/DEBIAN/preinst"
@@ -713,21 +686,11 @@ function buildPackage() # args: packageDir, outputDir, versionPList [, useZOptio
 
 	packageName=`getPackageFileNameUsingControlFile "$packageDir/DEBIAN/control"`
 		
-	# build package #
+	# create package #
 
-	packageFileName="$outputDir/${packageName}.deb"
-
-	echo -n "Building package $packageFileName... "
+	createDebianPackage "$packageDir" "$packageName" "$outputDir"
 	
-	export COPYFILE_DISABLE=true
-	export COPY_EXTENDED_ATTRIBUTES_DISABLE=true
-	
-	"$dpkgdebPath" -b "$packageDir" "$packageFileName" &> /dev/null || \
-		panic $? "Failed."
-
-	echo "Done."
-	
-	# create zip file #
+	# create zip #
 	
 	if [[ $useZOption == "true" ]]; then
 
@@ -747,6 +710,49 @@ function buildPackage() # args: packageDir, outputDir, versionPList [, useZOptio
 		
 		echo "Done."
 	fi
+}
+
+function createDebianPackage() # args: sourceDir, packageName [, outputDir]
+{
+	$setCmd
+	
+	local sourceDir="$1"
+	local packageName="$2"
+	local outputDir="$3"
+	
+	local packageFile="${outputDir:-.}/$packageName.deb"
+	
+	echo -n "Building package $packageFileName... "
+
+	local tempDir="`getTempDir`"
+	
+	createTarForDebianPackage "$sourceDir/DEBIAN" "$tempDir" "control" "-n"
+	createTarForDebianPackage "$sourceDir" "$tempDir" "data" "--exclude DEBIAN/* --exclude DEBIAN"
+	
+	echo "2.0" > "$tempDir/debian-binary" || \
+		panic $? "Failed to create debian-binary file"
+	
+	ar -rc "$packageFile" "$tempDir/debian-binary" "$tempDir/control.tar.gz" "$tempDir/data.tar.gz" || \
+		panic $? "Failed to create Debian archive"
+
+	echo "Done."
+}
+
+function createTarForDebianPackage() # args: sourceDir, outputDir, tarName [, options]
+{
+	$setCmd
+	
+	local sourceDir="$1"
+	local outputDir="$2"
+	local tarName="$3"
+	local options="$4"
+	
+	pushd "$sourceDir" 1> /dev/null
+	
+	tar -cLpz --disable-copyfile --exclude ".*" $options -f "$outputDir/$tarName.tar.gz" * || \
+		panic $? "Failed to create $tarName archive"
+
+	popd 1> /dev/null
 }
 
 
@@ -872,7 +878,7 @@ function downloadRuntimeBrowserHeaderFiles() # args: outputDirectory
 	
 	extractTar "$outputDirectory/$tarName.tar.gz" "$outputDirectory"
 
-	untardDir=`tar -tf "$outputDirectory/$tarName.tar.gz" | grep -P "^[^/]+/$"` || \
+	untardDir=`tar -tf "$outputDirectory/$tarName.tar.gz" | perl -ne 'print if /^[^\/]+\/$/'` || \
 		panic $? "Failed to get name of directory of tar $outputDirectory/$tarName.tar.gz"
 
 	mv "$outputDirectory/$untardDir" "$outputDirectory/$tarName"
@@ -1135,22 +1141,21 @@ function cleanUpDumpedHeaderFiles() # args: baseDir [, forWhat]
 			panic $? "Failed to move $baseDir/XXUnknownSuperclass.h to $baseDir/SBUnknownSuperclass.h"
 	fi
 
+	# find files
+
+	files=(`find "$baseDir" -name '*.h'`)
+
 	# remove imports (in $removals)
 	
 	for r in "${removals[@]}"; do
-		set +e
-		files=(`grep -Pril "^#import \"$r\"$" "$baseDir/"*`)
-		set -e
-
 		for f in "${files[@]}"; do
-			sed -i "" "s/^#import \"$r\"$//g" "$f" || \
-				panic $? "Failed to sed $f"
+			perl -i -pe 's/^#import "'"$r"'"$//g' "$f" || \
+				panic $? "Failed to perl $f"
 		done
 	done
 	
 	# iterate through all files
 	
-	files=(`find "$baseDir" -name '*.h'`)
 	for f in "${files[@]}"; do
 		fName="${f##*/}"
 		fileDir="${f%/*}"
@@ -1165,7 +1170,7 @@ function cleanUpDumpedHeaderFiles() # args: baseDir [, forWhat]
 			# change "headerfile.h" imports to <framework/headerfile.h> imports (if headerfile.h exists in framework's directory)
 			
 			set +e
-			imports=(`grep -Pio "#import[\\s]+\"[^/]+\"" "$f"`)
+			imports=(`perl -ne 'print if /#import[\s]+"[^\/]+"/' "$f"`)
 			set -e
 			
 			for i in "${imports[@]}"; do
@@ -1403,25 +1408,22 @@ function requireSudo() # args: ...
 
 # === xcbp-logos === #
 
-function doesFileContain()
+function doesFileContain() # args: filePath, pattern
 {
 	$setCmd
 	
 	local filePath="$1"
 	local pattern="$2"
-	local grepReturn
+	local perlValue
 	local funcReturn
 	
-	set -e
-	grep -Piq "$pattern" "$filePath" || grepReturn=$?
-	set +e
+	perlValue=`perl -ne 'if (/'"$pattern"'/) { print "true"; exit; }' "$filePath"` || \
+		panic $? "Failed to perl"
 
-	if [[ $grepReturn == "" || $grepReturn == 0 ]]; then # contains
-		funcReturn=true
-	elif [[ $grepReturn == 1 ]]; then # doesn't contain
-		funcReturn=false
-	else # error
-		panic $grepReturn "Failed to grep $filePath"
+	if [[ $perlValue == "true" ]]; then
+		funcReturn="true"
+	else
+		funcReturn="false"
 	fi
 	
 	# return #
@@ -1596,7 +1598,9 @@ function xcodeBuildPhase() # no args
 	fi
 
 	# if doing Archive, For Archiving or For Profiling, build package...
-	if [[ "$CONFIGURATION" == "Release" && "$VALIDATE_PRODUCT" == "YES" ]] || [[ "$iOSOpenDevInstallOnAnyBuild" == "YES" ]]; then
+	if [[ "$CONFIGURATION" == "Release" && "$VALIDATE_PRODUCT" == "YES" ]] || [[ "$iOSOpenDevInstallOnAnyBuild" == "YES" ]] || [[ "$iOSOpenDevBuildPackageOnAnyBuild" == "YES" ]]; then
+
+echo "***HERE***"
 	
 		# if doing Archive, do...
 		#if [[ "$DEPLOYMENT_POSTPROCESSING" == "YES" ]]; then
@@ -1617,33 +1621,37 @@ function xcodeBuildPhase() # no args
 		
 		buildPackage "$packageDirectory" "$allPackagesDir" "$versionPListPath" true
 		
-		# if doing For Archiving or For Profiling, see about installing package on device...
-		if [[ "$DEPLOYMENT_POSTPROCESSING" == "NO" || "$iOSOpenDevInstallOnAnyBuild" == "YES" ]]; then
+		# if more than just $iOSOpenDevBuildPackageOnAnyBuild == "YES" ...
+		if [[ "$CONFIGURATION" == "Release" && "$VALIDATE_PRODUCT" == "YES" ]] || [[ "$iOSOpenDevInstallOnAnyBuild" == "YES" ]]; then
 		
-			# if build setting iOSOpenDevInstallOnProfiling is enabled, installation of package is enabled...
-			if [[ "$iOSOpenDevInstallOnProfiling" == "YES"  || "$iOSOpenDevInstallOnAnyBuild" == "YES" ]]; then
+			# if doing For Archiving or For Profiling, see about installing package on device...
+			if [[ "$DEPLOYMENT_POSTPROCESSING" == "NO" || "$iOSOpenDevInstallOnAnyBuild" == "YES" ]]; then
 			
-				# if iOSOpenDevDevice has a value, install package on device...
-				if [[ "$iOSOpenDevDevice" != "" ]]; then
-
-					# get package file name #
-					packageFileName="`getPackageFileNameUsingControlFile \"$packageDirectory/DEBIAN/control\"`.deb"
+				# if build setting iOSOpenDevInstallOnProfiling is enabled, installation of package is enabled...
+				if [[ "$iOSOpenDevInstallOnProfiling" == "YES"  || "$iOSOpenDevInstallOnAnyBuild" == "YES" ]]; then
+				
+					# if iOSOpenDevDevice has a value, install package on device...
+					if [[ "$iOSOpenDevDevice" != "" ]]; then
+	
+						# get package file name #
+						packageFileName="`getPackageFileNameUsingControlFile \"$packageDirectory/DEBIAN/control\"`.deb"
+							
+						# install package on device #					
+						managePackageOnDevice "install" "$allPackagesDir/$packageFileName" "$iOSOpenDevDevice"
 						
-					# install package on device #					
-					managePackageOnDevice "install" "$allPackagesDir/$packageFileName" "$iOSOpenDevDevice"
-					
-					# respring? #
-					if [[ "$iOSOpenDevRespringOnInstall" == "YES" ]]; then
-						echo "Respringing device..."
-						runFuncOnDevice "respring" "$iOSOpenDevDevice"
+						# respring? #
+						if [[ "$iOSOpenDevRespringOnInstall" == "YES" ]]; then
+							echo "Respringing device..."
+							runFuncOnDevice "respring" "$iOSOpenDevDevice"
+						fi
+					else
+						# build setting iOSOpenDevDevice is empty #
+						panic 1 "Unable to install package on device since build setting iOSOpenDevDevice is not set or is empty and it is not exported in your Bash personal initialization file"
 					fi
 				else
-					# build setting iOSOpenDevDevice is empty #
-					panic 1 "Unable to install package on device since build setting iOSOpenDevDevice is not set or is empty and it is not exported in your Bash personal initialization file"
+					# build setting iOSOpenDevInstallOnProfiling is disabled #
+					echo "Installation of package on device is disabled. To enable, set build setting iOSOpenDevInstallOnProfiling to YES."
 				fi
-			else
-				# build setting iOSOpenDevInstallOnProfiling is disabled #
-				echo "Installation of package on device is disabled. To enable, set build setting iOSOpenDevInstallOnProfiling to YES."
 			fi
 		fi
 	fi
