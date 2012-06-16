@@ -30,7 +30,7 @@ export PATH=/opt/iOSOpenDev/bin:/opt/theos/bin:/opt/local/bin:/opt/local/sbin:/u
 # script #
 
 export scriptName="${0##*/}"
-export scriptVer="1.3"
+export scriptVer="1.3.1"
 export originalArguments=("$@")
 export activeActionArg
 
@@ -727,7 +727,7 @@ function createDebianPackage() # args: sourceDir, packageName [, outputDir]
 	local tempDir="`getTempDir`"
 	
 	createTarForDebianPackage "$sourceDir/DEBIAN" "$tempDir" "control" "-n"
-	createTarForDebianPackage "$sourceDir" "$tempDir" "data" "--exclude DEBIAN/* --exclude DEBIAN"
+	createTarForDebianPackage "$sourceDir" "$tempDir" "data" "--exclude" "DEBIAN/*" "--exclude" "DEBIAN"
 	
 	echo "2.0" > "$tempDir/debian-binary" || \
 		panic $? "Failed to create debian-binary file"
@@ -745,11 +745,11 @@ function createTarForDebianPackage() # args: sourceDir, outputDir, tarName [, op
 	local sourceDir="$1"
 	local outputDir="$2"
 	local tarName="$3"
-	local options="$4"
+	shift 3
 	
 	pushd "$sourceDir" 1> /dev/null
-	
-	tar -cLpz --disable-copyfile --exclude ".*" $options -f "$outputDir/$tarName.tar.gz" * || \
+
+	tar -cLpz --disable-copyfile --exclude ".*" "$@" -f "$outputDir/$tarName.tar.gz" * || \
 		panic $? "Failed to create $tarName archive"
 
 	popd 1> /dev/null
