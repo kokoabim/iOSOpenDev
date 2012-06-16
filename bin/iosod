@@ -1600,8 +1600,6 @@ function xcodeBuildPhase() # no args
 	# if doing Archive, For Archiving or For Profiling, build package...
 	if [[ "$CONFIGURATION" == "Release" && "$VALIDATE_PRODUCT" == "YES" ]] || [[ "$iOSOpenDevInstallOnAnyBuild" == "YES" ]] || [[ "$iOSOpenDevBuildPackageOnAnyBuild" == "YES" ]]; then
 
-echo "***HERE***"
-	
 		# if doing Archive, do...
 		#if [[ "$DEPLOYMENT_POSTPROCESSING" == "YES" ]]; then
 		#fi
