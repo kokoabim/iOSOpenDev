@@ -49,6 +49,7 @@ typedef enum {
     LAActivatorVersion_1_5_9 = 1050900,
     LAActivatorVersion_1_6 = 1060000,
     LAActivatorVersion_1_6_1 = 1060100,
+    LAActivatorVersion_1_6_2 = 1060200,
 } LAActivatorVersion;
 
 // Activator
@@ -263,6 +264,8 @@ extern NSString * const LAEventNameMotionShake;
 
 extern NSString * const LAEventNameHeadsetButtonPressSingle;
 extern NSString * const LAEventNameHeadsetButtonHoldShort;
+extern NSString * const LAEventNameHeadsetConnected;
+extern NSString * const LAEventNameHeadsetDisconnected;
 
 extern NSString * const LAEventNameLockScreenClockDoubleTap;
 

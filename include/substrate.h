@@ -1,5 +1,5 @@
 /* Cydia Substrate - Powerful Code Insertion Platform
- * Copyright (C) 2008-2011  Jay Freeman (saurik)
+ * Copyright (C) 2008-2012  Jay Freeman (saurik)
 */
 
 /* GNU Lesser General Public License, Version 3 {{{ */
@@ -83,6 +83,18 @@ void SubstrateProcessRelease(SubstrateProcessRef process);
 
 SubstrateMemoryRef SubstrateMemoryCreate(SubstrateAllocatorRef allocator, SubstrateProcessRef process, void *data, size_t size);
 void SubstrateMemoryRelease(SubstrateMemoryRef memory);
+#endif
+
+#ifdef __ANDROID__
+#include <jni.h>
+_extern void MSJavaHookClassLoad(JNIEnv *jni, const char *name, void (*callback)(void *, JNIEnv *, jclass), void *data _default(NULL));
+_extern void MSJavaHookMethod(JNIEnv *jni, jclass _class, jmethodID methodID, void *function, void **result);
+_extern void MSJavaBlessClassLoader(JNIEnv *jni, jobject loader);
+
+typedef struct MSJavaObjectKey_ *MSJavaObjectKey;
+_extern MSJavaObjectKey MSJavaNewObjectKey();
+_extern void *MSJavaGetObjectKey(JNIEnv *jni, jobject object, MSJavaObjectKey key);
+_extern void MSJavaSetObjectKey(JNIEnv *jni, jobject object, MSJavaObjectKey key, void *value, void (*clean)(void *, JNIEnv *, void *) _default(NULL), void *data _default(NULL));
 #endif
 
 #ifdef __cplusplus
@@ -187,9 +199,9 @@ static inline Type_ &MSHookIvar(id self, const char *name) {
     MSHookMessage($ ## _class, @selector(arg0:arg1:arg2:arg3:arg4:arg5:), MSHake(_class ## $ ## arg0 ## $ ## arg1 ## $ ## arg2 ## $ ## arg3 ## $ ## arg4 ## $ ## arg5 ## $))
 
 #define MSRegister_(name, dollar, colon) \
-    static class C_$ ## name ## $ ## dollar { public: _finline C_$ ## name ## $ ##dollar() { \
+    namespace { static class C_$ ## name ## $ ## dollar { public: _finline C_$ ## name ## $ ##dollar() { \
         MSHookMessage($ ## name, @selector(colon), MSHake(name ## $ ## dollar)); \
-    } } V_$ ## name ## $ ## dollar; \
+    } } V_$ ## name ## $ ## dollar; } \
 
 #define MSIgnore_(name, dollar, colon)
 
@@ -286,8 +298,8 @@ static inline void MSHookFunction(Type_ *symbol, Type_ *replace) {
 }
 
 template <typename Type_>
-static inline void MSHookSymbol(Type_ *&value, const char *name, void *handle = RTLD_DEFAULT) {
-    value = reinterpret_cast<Type_ *>(dlsym(handle, name));
+static inline void MSHookSymbol(Type_ *&value, const char *name, MSImageRef image = NULL) {
+    value = reinterpret_cast<Type_ *>(MSFindSymbol(image, name));
 }
 
 template <typename Type_>
@@ -297,11 +309,60 @@ static inline void MSHookFunction(const char *name, Type_ *replace, Type_ **resu
     return MSHookFunction(symbol, replace, result);
 }
 
+template <typename Type_>
+static inline void MSHookFunction(MSImageRef image, const char *name, Type_ *replace, Type_ **result = NULL) {
+    Type_ *symbol;
+    MSHookSymbol(symbol, name, image);
+    return MSHookFunction(symbol, replace, result);
+}
+
+#endif
+
+#ifdef __ANDROID__
+
+template <typename Type_>
+static inline void MSJavaHookMethod(JNIEnv *jni, jclass _class, jmethodID method, Type_ *replace, Type_ **result) {
+    return MSJavaHookMethod(
+        jni, _class, method,
+        reinterpret_cast<void *>(replace),
+        reinterpret_cast<void **>(result)
+    );
+}
+
+static inline void MSAndroidGetPackage(JNIEnv *jni, jobject global, const char *name, jobject &local, jobject &loader) {
+    jclass Context(jni->FindClass("android/content/Context"));
+    jmethodID Context$createPackageContext(jni->GetMethodID(Context, "createPackageContext", "(Ljava/lang/String;I)Landroid/content/Context;"));
+    jmethodID Context$getClassLoader(jni->GetMethodID(Context, "getClassLoader", "()Ljava/lang/ClassLoader;"));
+
+    jstring string(jni->NewStringUTF(name));
+    local = jni->CallObjectMethod(global, Context$createPackageContext, string, 3);
+    loader = jni->CallObjectMethod(local, Context$getClassLoader);
+}
+
+static inline jclass MSJavaFindClass(JNIEnv *jni, jobject loader, const char *name) {
+    jclass Class(jni->FindClass("java/lang/Class"));
+    jmethodID Class$forName(jni->GetStaticMethodID(Class, "forName", "(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;"));
+
+    jstring string(jni->NewStringUTF(name));
+    jobject _class(jni->CallStaticObjectMethod(Class, Class$forName, string, JNI_TRUE, loader));
+    if (jni->ExceptionCheck())
+        return NULL;
+
+    return reinterpret_cast<jclass>(_class);
+}
+
+_disused static void MSJavaCleanWeak(void *data, JNIEnv *jni, void *value) {
+    jni->DeleteWeakGlobalRef(reinterpret_cast<jweak>(value));
+}
+
 #endif
 
 #define MSHook(type, name, args...) \
     _disused static type (*_ ## name)(args); \
     static type $ ## name(args)
+
+#define MSJavaHook(type, name, args...) \
+    MSHook(type, name, JNIEnv *jni, ## args)
 
 #ifdef __cplusplus
 #define MSHake(name) \
@@ -311,8 +372,40 @@ static inline void MSHookFunction(const char *name, Type_ *replace, Type_ **resu
     &$ ## name, (void **) &_ ## name
 #endif
 
+#define SubstrateConcat_(lhs, rhs) \
+    lhs ## rhs
+#define SubstrateConcat(lhs, rhs) \
+    SubstrateConcat_(lhs, rhs)
+
+#ifdef __APPLE__
+    #define SubstrateSection \
+        __attribute__((__section__("__TEXT, __substrate")))
+#else
+    #define SubstrateSection \
+        __attribute__((__section__(".substrate")))
+#endif
+
+#ifdef __APPLE__
+#define MSFilterCFBundleID "Filter:CFBundleID"
+#define MSFilterObjC_Class "Filter:ObjC.Class"
+#endif
+
+#define MSFilterExecutable "Filter:Executable"
+
+#define MSConfig(name, value) \
+    extern const char SubstrateConcat(_substrate_, __LINE__)[] SubstrateSection = name "=" value;
+
+#ifdef __cplusplus
+#define MSInitialize \
+    static void _MSInitialize(void); \
+    namespace { static class $MSInitialize { public: _finline $MSInitialize() { \
+        _MSInitialize(); \
+    } } $MSInitialize; } \
+    static void _MSInitialize()
+#else
 #define MSInitialize \
     __attribute__((__constructor__)) static void _MSInitialize(void)
+#endif
 
 #define Foundation_f "/System/Library/Frameworks/Foundation.framework/Foundation"
 #define UIKit_f "/System/Library/Frameworks/UIKit.framework/UIKit"

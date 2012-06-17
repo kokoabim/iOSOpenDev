@@ -13,6 +13,12 @@
 #define CHAppName "CaptainHook"
 #endif
 
+#ifdef __clang__
+#if !__has_feature(objc_arc)
+#define CHHasARC
+#endif
+#endif
+
 // Some Debugging/Logging Commands
 
 #define CHStringify_(x) #x
@@ -642,7 +648,7 @@ static void *CHIvar_(id object, const char *name)
 {
 	Ivar ivar = class_getInstanceVariable(object_getClass(object), name);
 	if (ivar)
-#if __has_feature(objc_arc)
+#ifdef CHHasARC
 		return (void *)&((char *)(__bridge void *)object)[ivar_getOffset(ivar)];
 #else
 		return (void *)&((char *)object)[ivar_getOffset(ivar)];
@@ -655,7 +661,7 @@ static void *CHIvar_(id object, const char *name)
 	(*CHIvarRef(object, name, type))
 	// Warning: Dereferences NULL if object is nil or name isn't found. To avoid this save CHIvarRef(...) and test if != NULL
 
-#if !__has_feature(objc_arc)
+#ifndef CHHasARC
 // Scope Autorelease
 __attribute__((unused)) CHInline
 static void CHScopeReleased(id *sro)

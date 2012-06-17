@@ -22,6 +22,7 @@ typedef enum {
 #define kAMMenuItemPriorityCut       300
 #define kAMMenuItemPriorityCopy      400
 #define kAMMenuItemPriorityPaste     500
+#define kAMMenuItemPriorityDelete    600
 #define kAMMenuItemPriorityCorrect   900
 #define kAMMenuItemPriorityDefault   1000
 
@@ -34,18 +35,20 @@ typedef enum {
 #define kAMMenuItemPriorityTweet     1100
 #define kAMMenuItemPriorityScroll    1200
 
+#define kAMMenuItemPriorityBuiltins  510
+
 @protocol AMMenuItem <NSObject>
-@property (nonatomic, readonly) SEL action;
+@property (nonatomic, readonly, assign) SEL action;
 	// Selector that will be sent to the target when menu item is pressed
-@property (nonatomic, readonly) SEL canPerform;
+@property (nonatomic, readonly, assign) SEL canPerform;
 	// Selector that will be sent to the target to query whether menu item is valid
-@property (nonatomic, copy) NSString *title;
+@property (nonatomic, readwrite, copy) NSString *title;
 	// Localized title of the menu item
-@property (nonatomic, assign) UIImage *image;
+@property (nonatomic, readwrite, assign) UIImage *image;
 	// Image that will be used to display the menu item
-@property (nonatomic, assign) AMMenuItemStyle style;
+@property (nonatomic, readwrite, assign) AMMenuItemStyle style;
 	// Style of the menu item
-@property (nonatomic) NSInteger priority;
+@property (nonatomic, readwrite, assign) NSInteger priority;
 	// Specify the priority of the item
 @end
 
@@ -68,6 +71,10 @@ typedef enum {
 	// Control which additional ActionMenu behaviors are valid on this target
 - (BOOL)always;
 	// Always returns YES (used by actions that are always valid)
+@end
+
+@interface UIAlertView (ActionMenu)
+- (void)showAboveExistingAlert;
 @end
 
 /*
