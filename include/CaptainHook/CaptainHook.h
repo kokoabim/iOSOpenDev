@@ -14,7 +14,7 @@
 #endif
 
 #ifdef __clang__
-#if !__has_feature(objc_arc)
+#if __has_feature(objc_arc)
 #define CHHasARC
 #endif
 #endif
