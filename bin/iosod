@@ -25,12 +25,12 @@ export setCmd="set -eo pipefail"
 $setCmd
 
 # path #
-export PATH=/opt/iOSOpenDev/bin:/opt/theos/bin:/opt/local/bin:/opt/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH
+export PATH=/opt/iOSOpenDev/bin:/opt/theos/bin:/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin:$PATH
 
 # script #
 
 export scriptName="${0##*/}"
-export scriptVer="1.3.1"
+export scriptVer="1.3.2"
 export originalArguments=("$@")
 export activeActionArg
 
