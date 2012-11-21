@@ -1525,9 +1525,9 @@ function xcodeBuildPhase() # no args
 	# process environment variables #
 	
 	local builtExecutable="$TARGET_BUILD_DIR/$EXECUTABLE_PATH"
-	local packageDirectory="$PROJECT_DIR/$PROJECT_NAME/Package"
+	local packageDirectory="$PROJECT_DIR/$TARGET_NAME/Package"
 	local packageInstallPath="$packageDirectory$INSTALL_PATH"
-	local packageVersionPListPath="$PROJECT_DIR/$PROJECT_NAME/PackageVersion.plist"
+	local packageVersionPListPath="$PROJECT_DIR/$TARGET_NAME/PackageVersion.plist"
 	local allPackagesDir="$PROJECT_DIR/Packages"
 	local builtProductsDir="$BUILT_PRODUCTS_DIR"
 	local latestBuildSymlink="$PROJECT_DIR/LatestBuild"
