@@ -4,3 +4,6 @@
 [submodule "include/CaptainHook"]
 	path = include/CaptainHook
 	url = https://github.com/rpetrich/CaptainHook.git
+[submodule "include/libactivator"]
+	path = include/libactivator
+	url = https://github.com/rpetrich/libactivator.git
