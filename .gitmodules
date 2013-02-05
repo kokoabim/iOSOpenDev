@@ -1,0 +1,9 @@
+[submodule "include/AssistantExtensions"]
+	path = include/AssistantExtensions
+	url = https://github.com/k3a/AssistantExtensions.git
+[submodule "include/CaptainHook"]
+	path = include/CaptainHook
+	url = https://github.com/rpetrich/CaptainHook.git
+[submodule "include/libactivator"]
+	path = include/libactivator
+	url = https://github.com/rpetrich/libactivator.git
