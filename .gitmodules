@@ -1,0 +1,3 @@
+[submodule "include/AssistantExtensions"]
+	path = include/AssistantExtensions
+	url = https://github.com/k3a/AssistantExtensions.git
