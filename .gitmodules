@@ -1,3 +1,6 @@
 [submodule "include/AssistantExtensions"]
 	path = include/AssistantExtensions
 	url = https://github.com/k3a/AssistantExtensions.git
+[submodule "include/CaptainHook"]
+	path = include/CaptainHook
+	url = https://github.com/rpetrich/CaptainHook.git
