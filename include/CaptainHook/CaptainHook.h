@@ -661,6 +661,57 @@ static void *CHIvar_(id object, const char *name)
 	(*CHIvarRef(object, name, type))
 	// Warning: Dereferences NULL if object is nil or name isn't found. To avoid this save CHIvarRef(...) and test if != NULL
 
+#define CHDeclareProperty(class, name) static const char k ## class ## _ ## name;
+#define CHPropertyGetValue(class, name) objc_getAssociatedObject(self, &k ## class ## _ ## name )
+#define CHPropertySetValue(class, name, value, policy) objc_setAssociatedObject(self, &k ## class ## _ ## name , value, policy)
+
+#define CHPropertyGetter(class, getter, type) CHOptimizedMethod0(new, type, class, getter)
+#define CHPropertySetter(class, setter, type, value) CHOptimizedMethod1(new, void, class, setter, type, value)
+
+// Obj-C dynamic property declaration (objects)
+#define CHProperty(class, type, getter, setter, policy) \
+	CHDeclareProperty(class, getter) \
+	CHPropertyGetter(class, getter, type) { \
+		return CHPropertyGetValue(class, getter); \
+	} \
+	CHPropertySetter(class, setter, type, getter) { \
+		CHPropertySetValue(class, getter, getter, policy); \
+	}
+#define CHPropertyRetain(class, type, getter, setter) CHProperty(class, type, getter, setter, OBJC_ASSOCIATION_RETAIN)
+#define CHPropertyRetainNonatomic(class, type, getter, setter) CHProperty(class, type, getter, setter, OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+#define CHPropertyCopy(class, type, getter, setter) CHProperty(class, type, getter, setter, OBJC_ASSOCIATION_COPY)
+#define CHPropertyCopyNonatomic(class, type, getter, setter) CHProperty(class, type, getter, setter, OBJC_ASSOCIATION_COPY_NONATOMIC)
+#define CHPropertyAssign(class, type, getter, setter) CHProperty(class, type, getter, setter, OBJC_ASSOCIATION_ASSIGN)
+
+#define CHPrimitivePropertyGetValue(class, name, type, val, default) \
+	type val = default; \
+	do { \
+		NSNumber * objVal = CHPropertyGetValue(class, name); \
+		[objVal getValue:& val ]; \
+	} while(0)
+#define CHPrimitivePropertySetValue(class, name, type, val) \
+	do { \
+		NSValue *objVal = [NSValue value:& val withObjCType:@encode( type )]; \
+		CHPropertySetValue(class, name, objVal, OBJC_ASSOCIATION_RETAIN_NONATOMIC); \
+	} while(0)
+
+// Primitive property equivalent (ie. BOOL, int, structs)
+#define CHPrimitiveProperty(class, type, getter, setter, default) \
+	CHDeclareProperty(class, getter) \
+	CHOptimizedMethod0(new, type, class, getter) { \
+		CHPrimitivePropertyGetValue( class , getter , type , val , default ) \
+		return val; \
+	} \
+	CHOptimizedMethod1(new, void, class, setter, type, getter) { \
+		CHPrimitivePropertySetValue( class , getter, type , getter ); \
+	}
+
+#define CHHookProperty(class, getter, setter) \
+	do { \
+		CHHook0(class, getter); \
+		CHHook1(class, setter); \
+	} while(0)
+
 #ifndef CHHasARC
 // Scope Autorelease
 __attribute__((unused)) CHInline

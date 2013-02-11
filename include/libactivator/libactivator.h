@@ -1,4 +1,5 @@
 #import <UIKit/UIKit.h>
+#import <libkern/OSAtomic.h>
 
 // libactivator
 // Centralized gestures and button management for iPhone OS
@@ -50,6 +51,11 @@ typedef enum {
     LAActivatorVersion_1_6 = 1060000,
     LAActivatorVersion_1_6_1 = 1060100,
     LAActivatorVersion_1_6_2 = 1060200,
+    LAActivatorVersion_1_7 = 1070000,
+    LAActivatorVersion_1_7_1 = 1070100,
+    LAActivatorVersion_1_7_2 = 1070200,
+    LAActivatorVersion_1_7_3 = 1070300,
+    LAActivatorVersion_1_7_4 = 1070400,
 } LAActivatorVersion;
 
 // Activator
@@ -60,12 +66,17 @@ typedef enum {
 @private
 	NSArray *_availableEventModes;
 @protected
+    NSDictionary *_cachedPreferences;
 	NSMutableDictionary *_cachedListenerTitles;
 	NSMutableDictionary *_cachedListenerDescriptions;
 	NSMutableDictionary *_cachedListenerGroups;
 	NSMutableDictionary *_cachedListenerIcons;
 	NSMutableDictionary *_cachedListenerSmallIcons;
 	CFMutableSetRef _listenerInstances;
+    BOOL _hasPerformedFullMetadataCache;
+    int _preference_notify_token;
+    uint64_t _preferences_change_count;
+    volatile OSSpinLock _cacheLock;
 }
 + (LAActivator *)sharedInstance;
 
@@ -218,6 +229,7 @@ extern NSString * const LAEventNameMenuPressSingle;
 extern NSString * const LAEventNameMenuPressDouble;
 extern NSString * const LAEventNameMenuPressTriple;
 extern NSString * const LAEventNameMenuHoldShort;
+extern NSString * const LAEventNameMenuHoldLong;
 
 extern NSString * const LAEventNameLockHoldShort;
 extern NSString * const LAEventNameLockPressDouble;
@@ -228,8 +240,14 @@ extern NSString * const LAEventNameSpringBoardSpread;
 extern NSString * const LAEventNameStatusBarSwipeRight;
 extern NSString * const LAEventNameStatusBarSwipeLeft;
 extern NSString * const LAEventNameStatusBarTapDouble;
+extern NSString * const LAEventNameStatusBarTapDoubleLeft;
+extern NSString * const LAEventNameStatusBarTapDoubleRight;
 extern NSString * const LAEventNameStatusBarTapSingle;
+extern NSString * const LAEventNameStatusBarTapSingleLeft;
+extern NSString * const LAEventNameStatusBarTapSingleRight;
 extern NSString * const LAEventNameStatusBarHold;
+extern NSString * const LAEventNameStatusBarHoldLeft;
+extern NSString * const LAEventNameStatusBarHoldRight;
 
 extern NSString * const LAEventNameVolumeDownUp;
 extern NSString * const LAEventNameVolumeUpDown;
@@ -271,3 +289,18 @@ extern NSString * const LAEventNameLockScreenClockDoubleTap;
 
 extern NSString * const LAEventNamePowerConnected;
 extern NSString * const LAEventNamePowerDisconnected;
+
+extern NSString * const LAEventNameThreeFingerTap;
+extern NSString * const LAEventNameThreeFingerPinch;
+extern NSString * const LAEventNameThreeFingerSpread;
+
+extern NSString * const LAEventNameFourFingerTap;
+extern NSString * const LAEventNameFourFingerPinch;
+extern NSString * const LAEventNameFourFingerSpread;
+
+extern NSString * const LAEventNameFiveFingerTap;
+extern NSString * const LAEventNameFiveFingerPinch;
+extern NSString * const LAEventNameFiveFingerSpread;
+
+extern NSString * const LAActivatorAvailableListenersChangedNotification;
+extern NSString * const LAActivatorAvailableEventsChangedNotification;

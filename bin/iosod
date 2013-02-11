@@ -30,7 +30,7 @@ export PATH=/opt/iOSOpenDev/bin:/opt/theos/bin:/usr/local/bin:/usr/bin:/usr/sbin
 # script #
 
 export scriptName="${0##*/}"
-export scriptVer="1.3.2"
+export scriptVer="1.4"
 export originalArguments=("$@")
 export activeActionArg
 
@@ -57,7 +57,7 @@ xcodeAsAppPath="/Applications/Xcode.app/Contents/Developer"
 export ActionNames=( \
 	"SignCode" \
 	"BuildPackage" "InstallPackage" "RemovePackage" "PurgePackage" \
-	"RunCmdOnDevice" "RunFuncOnDevice" \
+	"SshToDevice" "RunCmdOnDevice" "RunFuncOnDevice" \
 	"DumpSDKHeaders" "CopyHeadersToSDK" "DumpAndCopyHeaders" "DownloadRBHeaders" "DownloadAndCopyRBHeaders" "RemoveCopiedHeaders" "DumpAllHeaders" \
 	"AddSshKeyToDevice" \
 	"XcodeBuildPhase" "XcodeBuildPhaseLogos" "Help")
@@ -218,6 +218,10 @@ export Action_XcodeBuildPhaseLogos=("--xcbp-logos" "" "" 0 0 xcodeBuildPhase_Log
 export Action_XcodeBuildPhase=("--xcbp" "" "" 0 0 xcodeBuildPhase false \
 "        DO NOT USE. For use by Xcode as a Build Phase for projects created from
         iOSOpenDev templates only.")
+
+export Action_SshToDevice=("ssh" "[-h host_address]" "h:" 0 0 sshToDevice false \
+"        Secure Shell (SSH) to device at <host_address>. If <host_address> is
+        omitted, the environment variable iOSOpenDevDevice is used.")
 
 export Action_Help=("--help" "" "" 0 0 "" false \
 "        Show this help.")
@@ -1359,6 +1363,26 @@ function runCmdOnDevice() # args: $hostAddress, ...
 		panic $? "Failed to run $@ on device $hostAddress"
 }
 
+# === ssh (Action) === #
+
+function sshToDevice() # args: $hostAddress
+{
+	local hostAddress="$1"
+	
+	if [[ $hostAddress == "" ]]; then
+	
+		requireExportedVariable "iOSOpenDevDevice"
+		
+		hostAddress="$iOSOpenDevDevice"
+		
+		[[ $hostAddress != "" ]] || \
+			panic 1 "Host address not provided and environment variable iOSOpenDevDevice is not set or is empty"
+	fi
+	
+	ssh root@$hostAddress || \
+		panic $? "Failed to SSH to device $hostAddress"
+}
+
 # === func (Action) === #
 
 function runFuncOnDevice() # args: function, hostAddress
@@ -1797,6 +1821,9 @@ case "${activeActionArg[$ActionProperty_ShortArg]}" in
 	;;
 	${Action_XcodeBuildPhase[$ActionProperty_ShortArg]})
 		"${activeActionArg[$ActionProperty_Function]}"
+	;;
+	${Action_SshToDevice[$ActionProperty_ShortArg]})
+		"${activeActionArg[$ActionProperty_Function]}" "$Opt_h"
 	;;
 	${Action_XcodeBuildPhaseLogos[$ActionProperty_ShortArg]})
 		"${activeActionArg[$ActionProperty_Function]}"

@@ -83,7 +83,7 @@ typedef struct __CTServerConnection *CTServerConnectionRef;
 #endif
 
 // iOSOpenDev: wrapped with define check (since occurs in other dumped files)
-#ifndef __CATransform3D__
+/* #ifndef __CATransform3D__
 #define __CATransform3D__ 1
 typedef struct CATransform3D {
 	float _field1;
@@ -103,7 +103,7 @@ typedef struct CATransform3D {
 	float _field15;
 	float _field16;
 } CATransform3D;
-#endif
+#endif */
 
 // iOSOpenDev: wrapped with define check (since occurs in other dumped files)
 #ifndef __CTCallRef__
