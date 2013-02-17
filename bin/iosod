@@ -526,7 +526,7 @@ function signCode() # args: executableToSign, identityToSignWith
 		if [[ -n "$entitlements" ]]; then
 			echo "Signing with entitlements..."
 			cmdArg+=("--entitlements" "$entitlements")
-		else
+		fi
 	fi
 
 	echo -n "Signing $executableToSign with `basename \"$cmdBin\"`... "
