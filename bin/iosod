@@ -1471,6 +1471,7 @@ function xcodeBuildPhase_Logos() # no args
 	local xmFileLangSpecNotObjCpp
 	local projectXmFiles
 	local logosStdErr
+	local logosErr=0
 	
 	# verify use
 	
@@ -1525,10 +1526,15 @@ function xcodeBuildPhase_Logos() # no args
 		echo "Logos Processor: $f -> ${f%.*}.mm..."
 
 		logosStdErr=$(("$logosProcessor" "$PROJECT_DIR/$TARGET_NAME/$f" > "$PROJECT_DIR/$TARGET_NAME/${f%.*}.mm") 2>&1) || \
-			panic $? "Failed Logos Processor"
-	
-		[[ $logosStdErr == "" ]] || \
-			panic 1 "Logos Processor outputted: $logosStdErr"
+			logosErr=$?
+		
+		if [[ $logosErr != 0 ]]; then
+			echo "Failed Logos Processor"
+			echo "Logos Processor outputted:"
+			echo "$logosStdErr"
+			exit $logosErr
+		fi
+		
 	done
 
 	echo "Note: If any *.xm file generated above by the Logos Processor (${projectXmFiles[@]}) is not being compiled below, then you must add it to the Xcode project to be compiled."
