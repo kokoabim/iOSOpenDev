@@ -39,7 +39,7 @@ export iOSOpenDevPath="/opt/iOSOpenDev"
 export userName="${SUDO_USER-$USER}"
 export userGroup=`id -g $userName`
 export userHome=`eval echo ~$userName`
-export bashProfileFiles=("$userHome/.bash_profile" "$userHome/.bash_login" "$userHome/.profile")
+export bashProfileFiles=("$userHome/.bash_profile" "$userHome/.bashrc" "$userHome/.bash_login" "$userHome/.profile")
 
 export tempDirsFile="`mktemp -d -t $scriptName`/tempdirs"
 touch "$tempDirsFile"
