@@ -264,8 +264,10 @@ function determineBashProfileFile()
 	
 	for f in "${bashProfileFiles[@]}"; do
 		if [[ -f "$f" ]]; then
-			filePath="$f"
-			break
+            if [[ -n `perl -ne 'print $1 if /^(?:export)? *'"iOSOpenDevPath"'=(.*)$/' "$f"` ]]; then
+    			filePath="$f"
+    			break
+            fi
 		fi
 	done
 	
