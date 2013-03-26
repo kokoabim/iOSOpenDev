@@ -1529,9 +1529,9 @@ function xcodeBuildPhase_Logos() # no args
 			logosErr=$?
 		
 		if [[ $logosErr != 0 ]]; then
-			echo "Failed Logos Processor"
-			echo "Logos Processor outputted:"
-			echo "$logosStdErr"
+			echo "Failed Logos Processor" >&2
+			echo "Logos Processor outputted:" >&2
+			echo "$logosStdErr" >&2
 			exit $logosErr
 		fi
 		
