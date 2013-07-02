@@ -1445,6 +1445,7 @@ function xcodeBuildPhase_Logos() # no args
 	local projectXmFiles
 	local projectXFiles
 	local logosStdErr
+	local logosErr=0
 	
 	# verify use
 	
@@ -1527,10 +1528,15 @@ function xcodeBuildPhase_Logos() # no args
 		echo "Logos Processor: $f -> ${f%.*}.mm..."
 
 		logosStdErr=$(("$logosProcessor" "$PROJECT_DIR/$TARGET_NAME/$f" > "$PROJECT_DIR/$TARGET_NAME/${f%.*}.mm") 2>&1) || \
-			panic $? "Failed Logos Processor"
-	
-		[[ $logosStdErr == "" ]] || \
-			panic 1 "Logos Processor outputted: $logosStdErr"
+			logosErr=$?
+		
+		if [[ $logosErr != 0 ]]; then
+			echo "Failed Logos Processor" >&2
+			echo "Logos Processor outputted:" >&2
+			echo "$logosStdErr" >&2
+			exit $logosErr
+		fi
+		
 	done
 	
 	for f in "${projectXFiles[@]}"; do
