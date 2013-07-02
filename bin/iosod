@@ -39,7 +39,7 @@ export iOSOpenDevPath="/opt/iOSOpenDev"
 export userName="${SUDO_USER-$USER}"
 export userGroup=`id -g $userName`
 export userHome=`eval echo ~$userName`
-export bashProfileFiles=("$userHome/.bash_profile" "$userHome/.bash_login" "$userHome/.profile")
+export bashProfileFiles=("$userHome/.bash_profile" "$userHome/.bashrc" "$userHome/.zshrc" "$userHome/.bash_login" "$userHome/.profile")
 
 export tempDirsFile="`mktemp -d -t $scriptName`/tempdirs"
 touch "$tempDirsFile"
@@ -252,8 +252,10 @@ function determineBashProfileFile()
 	
 	for f in "${bashProfileFiles[@]}"; do
 		if [[ -f "$f" ]]; then
-			filePath="$f"
-			break
+            if [[ -n `perl -ne 'print $1 if /^(?:export)? *'"iOSOpenDevPath"'=(.*)$/' "$f"` ]]; then
+    			filePath="$f"
+    			break
+            fi
 		fi
 	done
 	
