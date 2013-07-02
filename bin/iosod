@@ -484,24 +484,22 @@ function signCode() # args: executableToSign, identityToSignWith
 	local cmdBin
 	local cmdArg
 	local codesignAllocatePath
-	local entitlements
+	local entitlements="$CODE_SIGN_ENTITLEMENTS"
 
 	# process arguments #
 	
 	requireFile "$executableToSign" false
-	
-	entitlements="$CODE_SIGN_ENTITLEMENTS"
-	
-	if [[ "$identityToSignWith" == "" ]]; then
+		
+	if [[ "$identityToSignWith" == "" || "$identityToSignWith" == "-" ]]; then
 
 		# use ldid #
+		
 		cmdBin="ldid"
 		
-		if [[ -n "$entitlements" ]]; then
-			echo "Signing with entitlements..."
-			cmdArg=("-S$entitlements")
-		else
+		if [[ "$entitlements" == "" ]]; then
 			cmdArg=("-S")
+		else
+			cmdArg=("-S${PROJECT_DIR}/${entitlements}")
 		fi
 
 	else
@@ -514,13 +512,12 @@ function signCode() # args: executableToSign, identityToSignWith
 
 		cmdBin=`xcodebuild -sdk iphoneos -find codesign` || \
 			panic $? "Failed to get codesign path"
-		
-		cmdArg=("-fs" "$identityToSignWith")
-		
-		if [[ -n "$entitlements" ]]; then
-			echo "Signing with entitlements..."
-			cmdArg+=("--entitlements" "$entitlements")
-		fi
+
+		if [[ "$entitlements" == "" ]]; then
+			cmdArg=("-fs" "$identityToSignWith")
+		else
+			cmdArg=("-fs" "$identityToSignWith" "--entitlements" "${PROJECT_DIR}/${entitlements}")
+		fi		
 	fi
 
 	echo -n "Signing $executableToSign with `basename \"$cmdBin\"`... "
