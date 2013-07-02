@@ -80,7 +80,7 @@ static inline Class CHLoadClass_(CHClassDeclaration_ *declaration, Class value)
 #define CHDeclareSig0_(return_type) \
 	const char *return_ = @encode(return_type); \
 	size_t return_len = __builtin_strlen(return_); \
-	char sig[return_len+2]; \
+	char sig[return_len+2+1]; \
 	__builtin_memcpy(sig, return_, return_len); \
 	sig[return_len] = _C_ID; \
 	sig[return_len+1] = _C_SEL; \
@@ -90,7 +90,7 @@ static inline Class CHLoadClass_(CHClassDeclaration_ *declaration, Class value)
 	size_t return_len = __builtin_strlen(return_); \
 	const char *type1_ = @encode(type1); \
 	size_t type1_len = __builtin_strlen(type1_); \
-	char sig[return_len+2+type1_len]; \
+	char sig[return_len+2+type1_len+1]; \
 	__builtin_memcpy(sig, return_, return_len); \
 	sig[return_len] = _C_ID; \
 	sig[return_len+1] = _C_SEL; \
@@ -103,7 +103,7 @@ static inline Class CHLoadClass_(CHClassDeclaration_ *declaration, Class value)
 	size_t type1_len = __builtin_strlen(type1_); \
 	const char *type2_ = @encode(type2); \
 	size_t type2_len = __builtin_strlen(type2_); \
-	char sig[return_len+2+type1_len+type2_len]; \
+	char sig[return_len+2+type1_len+type2_len+1]; \
 	__builtin_memcpy(sig, return_, return_len); \
 	sig[return_len] = _C_ID; \
 	sig[return_len+1] = _C_SEL; \
@@ -119,7 +119,7 @@ static inline Class CHLoadClass_(CHClassDeclaration_ *declaration, Class value)
 	size_t type2_len = __builtin_strlen(type2_); \
 	const char *type3_ = @encode(type3); \
 	size_t type3_len = __builtin_strlen(type3_); \
-	char sig[return_len+2+type1_len+type2_len+type3_len]; \
+	char sig[return_len+2+type1_len+type2_len+type3_len+1]; \
 	__builtin_memcpy(sig, return_, return_len); \
 	sig[return_len] = _C_ID; \
 	sig[return_len+1] = _C_SEL; \
@@ -138,7 +138,7 @@ static inline Class CHLoadClass_(CHClassDeclaration_ *declaration, Class value)
 	size_t type3_len = __builtin_strlen(type3_); \
 	const char *type4_ = @encode(type4); \
 	size_t type4_len = __builtin_strlen(type4_); \
-	char sig[return_len+2+type1_len+type2_len+type3_len+type4_len]; \
+	char sig[return_len+2+type1_len+type2_len+type3_len+type4_len+1]; \
 	__builtin_memcpy(sig, return_, return_len); \
 	sig[return_len] = _C_ID; \
 	sig[return_len+1] = _C_SEL; \
@@ -160,7 +160,7 @@ static inline Class CHLoadClass_(CHClassDeclaration_ *declaration, Class value)
 	size_t type4_len = __builtin_strlen(type4_); \
 	const char *type5_ = @encode(type5); \
 	size_t type5_len = __builtin_strlen(type5_); \
-	char sig[return_len+2+type1_len+type2_len+type3_len+type4_len+type5_len]; \
+	char sig[return_len+2+type1_len+type2_len+type3_len+type4_len+type5_len+1]; \
 	__builtin_memcpy(sig, return_, return_len); \
 	sig[return_len] = _C_ID; \
 	sig[return_len+1] = _C_SEL; \
@@ -185,7 +185,7 @@ static inline Class CHLoadClass_(CHClassDeclaration_ *declaration, Class value)
 	size_t type5_len = __builtin_strlen(type5_); \
 	const char *type6_ = @encode(type6); \
 	size_t type6_len = __builtin_strlen(type6_); \
-	char sig[return_len+2+type1_len+type2_len+type3_len+type4_len+type5_len+type6_len]; \
+	char sig[return_len+2+type1_len+type2_len+type3_len+type4_len+type5_len+type6_len+1]; \
 	__builtin_memcpy(sig, return_, return_len); \
 	sig[return_len] = _C_ID; \
 	sig[return_len+1] = _C_SEL; \
@@ -213,7 +213,7 @@ static inline Class CHLoadClass_(CHClassDeclaration_ *declaration, Class value)
 	size_t type6_len = __builtin_strlen(type6_); \
 	const char *type7_ = @encode(type7); \
 	size_t type7_len = __builtin_strlen(type7_); \
-	char sig[return_len+2+type1_len+type2_len+type3_len+type4_len+type5_len+type6_len+type7_len]; \
+	char sig[return_len+2+type1_len+type2_len+type3_len+type4_len+type5_len+type6_len+type7_len+1]; \
 	__builtin_memcpy(sig, return_, return_len); \
 	sig[return_len] = _C_ID; \
 	sig[return_len+1] = _C_SEL; \
@@ -244,7 +244,7 @@ static inline Class CHLoadClass_(CHClassDeclaration_ *declaration, Class value)
 	size_t type7_len = __builtin_strlen(type7_); \
 	const char *type8_ = @encode(type8); \
 	size_t type8_len = __builtin_strlen(type8_); \
-	char sig[return_len+2+type1_len+type2_len+type3_len+type4_len+type5_len+type6_len+type7_len+type8_len]; \
+	char sig[return_len+2+type1_len+type2_len+type3_len+type4_len+type5_len+type6_len+type7_len+type8_len+1]; \
 	__builtin_memcpy(sig, return_, return_len); \
 	sig[return_len] = _C_ID; \
 	sig[return_len+1] = _C_SEL; \
@@ -278,7 +278,7 @@ static inline Class CHLoadClass_(CHClassDeclaration_ *declaration, Class value)
 	size_t type8_len = __builtin_strlen(type8_); \
 	const char *type9_ = @encode(type9); \
 	size_t type9_len = __builtin_strlen(type9_); \
-	char sig[return_len+2+type1_len+type2_len+type3_len+type4_len+type5_len+type6_len+type7_len+type8_len+type9_len]; \
+	char sig[return_len+2+type1_len+type2_len+type3_len+type4_len+type5_len+type6_len+type7_len+type8_len+type9_len+1]; \
 	__builtin_memcpy(sig, return_, return_len); \
 	sig[return_len] = _C_ID; \
 	sig[return_len+1] = _C_SEL; \

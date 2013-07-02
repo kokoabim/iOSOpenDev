@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# --------------------------------------------------------------
+# -----------------------------------------------------------------------
 # iOSOpenDev -- iOS Open Development (http://www.iOSOpenDev.com)
-# Copyright (C) 2012 Spencer W.S. James <dev@iosopendev.com>
-# --------------------------------------------------------------
+# Copyright (C) 2012-2013 Spencer W.S. James (Kokoabim) <kokoabim@me.com>
+# -----------------------------------------------------------------------
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -15,11 +15,11 @@
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-# --------------------------------------------------------------
+# -----------------------------------------------------------------------
 # iOSOpenDev is an independent project and has not been authorized, sponsored, or otherwise approved by Apple Inc.
 # IOS is a registered trademark of Cisco and is used under license by Apple Inc.
 # Xcode is a registered trademark of Apple Inc.
-# --------------------------------------------------------------
+# -----------------------------------------------------------------------
 
 export setCmd="set -eo pipefail"
 $setCmd
@@ -30,7 +30,7 @@ export PATH=/opt/iOSOpenDev/bin:/opt/theos/bin:/usr/local/bin:/usr/bin:/usr/sbin
 # script #
 
 export scriptName="${0##*/}"
-export scriptVer="1.4"
+export scriptVer="1.5"
 export originalArguments=("$@")
 export activeActionArg
 
@@ -58,7 +58,8 @@ export ActionNames=( \
 	"SignCode" \
 	"BuildPackage" "InstallPackage" "RemovePackage" "PurgePackage" \
 	"SshToDevice" "RunCmdOnDevice" "RunFuncOnDevice" \
-	"DumpSDKHeaders" "CopyHeadersToSDK" "DumpAndCopyHeaders" "DownloadRBHeaders" "DownloadAndCopyRBHeaders" "RemoveCopiedHeaders" "DumpAllHeaders" \
+	"UpdateIncludeAndLib" \
+	"DumpSDKHeaders" "CopyHeadersToSDK" "DumpAndCopyHeaders" "RemoveCopiedHeaders" "DumpAllHeaders" \
 	"AddSshKeyToDevice" \
 	"XcodeBuildPhase" "XcodeBuildPhaseLogos" "Help")
 export ActionProperty_ShortArg=0
@@ -154,24 +155,6 @@ export Action_DumpAndCopyHeaders=("dump2sdk" "[-i] [-z] [-t header_tag] framewor
 
         Framework type options:
             public, private, springboard")
-
-export Action_DownloadRBHeaders=("rb" "output_directory" "" 1 1 getRuntimeBrowserHeaderFiles false \
-"        Download RuntimeBrowser produced header files to <output_directory>.
-        If the version of the latest iOS SDK on this computer is not available
-        for download then this action will fail.")
-            
-export Action_DownloadAndCopyRBHeaders=("rb2sdk" "[-t header_tag] framework_type" "" 1 1 downloadAndCopyRuntimeBrowserHeaderFilesToSDK true \
-"        Download and copy RuntimeBrowser produced header files of the
-        specified iOS SDK <framework_type>, tagging each header file with
-        <header_tag>, if provided. If <framework_type> is public and
-        <header_tag> is empty, a header tag of \"_Dumped\" is used so that
-        original SDK header files are not overwritten. Header files are
-        downloaded to a temporary directory which is removed. If the version of
-        the latest iOS SDK on this computer is not avilable for download then
-        this action will fail.
-
-        Framework type options:
-            public, private")
           
 export Action_RemoveCopiedHeaders=("rmheaders" "framework_type header_tag" "" 2 2 removeCopiedHeaders true \
 "        Remove previously copied header files of the specified iOS SDK
@@ -222,6 +205,11 @@ export Action_XcodeBuildPhase=("--xcbp" "" "" 0 0 xcodeBuildPhase false \
 export Action_SshToDevice=("ssh" "[-h host_address]" "h:" 0 0 sshToDevice false \
 "        Secure Shell (SSH) to device at <host_address>. If <host_address> is
         omitted, the environment variable iOSOpenDevDevice is used.")
+
+export Action_UpdateIncludeAndLib=("update" "[-h host_address]" "h:" 0 0 updateIncludeAndLib false \
+"        Update include and lib directories using device at <host_address>.
+        If <host_address> is omitted, the environment variable
+        iOSOpenDevDevice is used.")
 
 export Action_Help=("--help" "" "" 0 0 "" false \
 "        Show this help.")
@@ -827,71 +815,6 @@ function managePackageOnDevice() # args: manageAction, packageFileOrName, hostAd
 	echo "Done."
 }
 
-# === rb2sdk (action) === #
-
-function downloadAndCopyRuntimeBrowserHeaderFilesToSDK() # args: getWhat [, headerFileTag]
-{
-	local getWhat="$1"
-	local headerFileTag="$2"
-	local tmpDir
-	local untardDir
-	
-	[[ $getWhat == "public" || $getWhat == "private" ]] || \
-		panic 1 "Invalid option: $getWhat"
-
-	tmpDir=`getTempDir`
-
-	echo "Downloading RuntimeBrowser produced iOS SDK header files..."
-
-	untardDir=`downloadRuntimeBrowserHeaderFiles "$tmpDir"`
-
-	echo "Copying RuntimeBrowser produced iOS SDK $getWhat framework header files..."
-
-	if [[ $getWhat == "public" ]]; then
-		copyHeadersToSDK "public" "$untardDir/Frameworks" "$headerFileTag"
-	elif [[ $getWhat == "private" ]]; then
-		copyHeadersToSDK "private" "$untardDir/PrivateFrameworks" "$headerFileTag"
-	fi
-}
-
-# === rb (action) === #
-
-function getRuntimeBrowserHeaderFiles() # args: outputDirectory
-{
-	local outputDirectory="$1"
-
-	echo "Downloading RuntimeBrowser produced iOS SDK header files..."
-
-	downloadRuntimeBrowserHeaderFiles "$outputDirectory"
-}
-
-function downloadRuntimeBrowserHeaderFiles() # args: outputDirectory
-{
-	$setcmd
-
-	local outputDirectory="$1"
-	local sdkVersion
-	local tarName
-	local untardDir
-	
-	sdkVersion=`getSdkProperty iphoneos SDKVersion`
-
-	tarName="RuntimeHeaders-$sdkVersion"
-
-	downloadFile "https://nodeload.github.com/nst/iOS-Runtime-Headers/tarball/$sdkVersion" "$outputDirectory/$tarName.tar.gz"
-	
-	extractTar "$outputDirectory/$tarName.tar.gz" "$outputDirectory"
-
-	untardDir=`tar -tf "$outputDirectory/$tarName.tar.gz" | perl -ne 'print if /^[^\/]+\/$/'` || \
-		panic $? "Failed to get name of directory of tar $outputDirectory/$tarName.tar.gz"
-
-	mv "$outputDirectory/$untardDir" "$outputDirectory/$tarName"
-	rm -f "$outputDirectory/$tarName.tar.gz"
-
-	# return #
-	echo "$outputDirectory/$tarName"
-}
-
 # === rmheaders (action) === #
 
 function removeCopiedHeaders() # args: removeWhat, headerFileTag
@@ -1383,6 +1306,53 @@ function sshToDevice() # args: $hostAddress
 		panic $? "Failed to SSH to device $hostAddress"
 }
 
+# === update (Action) === #
+
+function updateIncludeAndLib() # args: $hostAddress
+{
+	local hostAddress="$1"
+	
+	if [[ $hostAddress == "" ]]; then
+	
+		requireExportedVariable "iOSOpenDevDevice"
+		
+		hostAddress="$iOSOpenDevDevice"
+		
+		[[ $hostAddress != "" ]] || \
+			panic 1 "Host address not provided and environment variable iOSOpenDevDevice is not set or is empty"
+	fi
+	
+	# include
+	
+	echo "Updating include files..."
+	
+	copyFromDevice $hostAddress "/usr/include/ActionMenu/ActionMenu.h" "$iOSOpenDevPath/include/ActionMenu"
+	copyFromDevice $hostAddress "/usr/include/SiriObjects.h" "$iOSOpenDevPath/include/AssistantExtensions"
+	downloadFile "https://raw.github.com/rpetrich/CaptainHook/master/CaptainHook.h" "$iOSOpenDevPath/include/CaptainHook/CaptainHook.h"
+	copyFromDevice $hostAddress "/usr/include/libactivator/libactivator.h" "$iOSOpenDevPath/include/libactivator"
+	copyFromDevice $hostAddress "/usr/include/substrate.h" "$iOSOpenDevPath/include"
+	
+	# lib	
+
+	echo "Updating lib files..."
+
+	copyFromDevice $hostAddress "/usr/lib/libactionmenu.dylib" "$iOSOpenDevPath/lib"
+	copyFromDevice $hostAddress "/usr/lib/libactivator.dylib" "$iOSOpenDevPath/lib"
+	copyFromDevice $hostAddress "/usr/lib/libsubstrate.dylib" "$iOSOpenDevPath/lib"
+}
+
+function copyFromDevice() # args: hostAddress, sourceFile, targetDir
+{
+	local hostAddress="$1"
+	local sourceFile="$2"
+	local targetDir="$3"
+	
+	requireDir "$targetDir" true
+
+	scp -q root@$hostAddress:"\"$sourceFile\"" "$targetDir" || \
+		panic $? "Failed to copy file $sourceFile from device $hostAddress to directory $targetDir"
+}
+
 # === func (Action) === #
 
 function runFuncOnDevice() # args: function, hostAddress
@@ -1798,12 +1768,6 @@ case "${activeActionArg[$ActionProperty_ShortArg]}" in
 	${Action_DumpAndCopyHeaders[$ActionProperty_ShortArg]})
 		"${activeActionArg[$ActionProperty_Function]}" "$@" "$Opt_t" "$Opt_z" "$Opt_i"
 	;;
-	${Action_DownloadRBHeaders[$ActionProperty_ShortArg]})
-		"${activeActionArg[$ActionProperty_Function]}" "$@"
-	;;
-	${Action_DownloadAndCopyRBHeaders[$ActionProperty_ShortArg]})
-		"${activeActionArg[$ActionProperty_Function]}" "$@" "$Opt_t"
-	;;
 	${Action_RemoveCopiedHeaders[$ActionProperty_ShortArg]})
 		"${activeActionArg[$ActionProperty_Function]}" "$@"
 	;;
@@ -1823,6 +1787,9 @@ case "${activeActionArg[$ActionProperty_ShortArg]}" in
 		"${activeActionArg[$ActionProperty_Function]}"
 	;;
 	${Action_SshToDevice[$ActionProperty_ShortArg]})
+		"${activeActionArg[$ActionProperty_Function]}" "$Opt_h"
+	;;
+	${Action_UpdateIncludeAndLib[$ActionProperty_ShortArg]})
 		"${activeActionArg[$ActionProperty_Function]}" "$Opt_h"
 	;;
 	${Action_XcodeBuildPhaseLogos[$ActionProperty_ShortArg]})
