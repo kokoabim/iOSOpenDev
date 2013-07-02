@@ -1437,9 +1437,13 @@ function xcodeBuildPhase_Logos() # no args
 	local logosProcessor
 	local projectFileModified=false
 	local projectContainsXmFiles
+	local projectContainsXFiles
 	local lastKnownXmFileTypeNotObjCpp
+	local lastKnownXFileTypeNotObjC
 	local xmFileLangSpecNotObjCpp
+	local xFileLangSpecNotObjC
 	local projectXmFiles
+	local projectXFiles
 	local logosStdErr
 	
 	# verify use
@@ -1453,6 +1457,7 @@ function xcodeBuildPhase_Logos() # no args
 	# for *.xm project files, set known file-type and language specifications to Objective-C++
 	
 	projectContainsXmFiles=`doesFileContain "$pbxProjectFilePath" '\/\* .+\.xm \*\/ *= *\{.*?isa *= *PBXFileReference\b'`
+	projectContainsXFiles=`doesFileContain "$pbxProjectFilePath" '\/\* .+\.x \*\/ *= *\{.*?isa *= *PBXFileReference\b'`
 	
 	if [[ $projectContainsXmFiles == "true" ]]; then
 	
@@ -1480,9 +1485,35 @@ function xcodeBuildPhase_Logos() # no args
 		fi
 	fi
 	
+	if [[ $projectContainsXFiles == "true" ]]; then
+	
+		lastKnownXFileTypeNotObjCpp=`doesFileContain "$pbxProjectFilePath" '\/\* .+\.x \*\/ *= *\{.*?isa *= *PBXFileReference\b[^\}]*?\blastKnownFileType *= *text\b'`
+	
+		if [[ $lastKnownXFileTypeNotObjC == "true" ]]; then
+			echo "Modifying Xcode project file: setting *.x file-types to Objective-C..."
+			
+			perl -i -pe 's/^(.*\/\* .+\.x \*\/ *= *{.*?isa *= *PBXFileReference\b[^}]*?\blastKnownFileType *= *)[^;]+(.*)$/\1sourcecode.c.objc\2/g' "$pbxProjectFilePath" || \
+				panic $? "Failed to modify Xcode project file"
+	
+			projectFileModified=true
+		fi
+	
+		xFileLangSpecNotObjC=`perl -ne 'if ($_ =~ /\/\* .+\.x \*\/ *= *\{.*?isa *= *PBXFileReference\b/ && $_ !~ /\bxcLanguageSpecificationIdentifier *= *xcode\.lang\.objc\b/) { print "true"; exit; }' "$pbxProjectFilePath"` || \
+			panic $? "Failed to execute perl on $pbxProjectFilePath"
+	
+		if [[ $xFileLangSpecNotObjC == "true" ]]; then
+			echo "Modifying Xcode project file: setting *.x language to Objective-C..."
+			
+			perl -i -pe 'if ($_ =~ /\/\* .+\.x \*\/ *= *\{.*?isa *= *PBXFileReference\b/ && $_ !~ /\bxcLanguageSpecificationIdentifier *= *xcode\.lang\.objc\b/) { s/^(.*\/\* .+\.x \*\/ *= *{.*?isa *= *PBXFileReference\b[^}]*)(.*)$/\1xcLanguageSpecificationIdentifier = xcode.lang.objc; \2/g; }' "$pbxProjectFilePath" || \
+				panic $? "Failed to modify Xcode project file"
+		
+			projectFileModified=true
+		fi
+	fi
+	
 	if [[ $projectFileModified == "true" ]]; then
 		echo "DON'T WORRY, EVERYTHING IS OK!"
-		echo "The Xcode project file was modified to provide better *.xm file support."
+		echo "The Xcode project file was modified to provide better *.xm & *.x file support."
 		echo "To dismiss this build error, just perform the build again."
 		panic 1
 	fi
@@ -1490,6 +1521,7 @@ function xcodeBuildPhase_Logos() # no args
 	# for each *.xm project file, use Logos Processor to generate *.mm file
 	
 	projectXmFiles=($(perl -ne 'if ($_ =~ /\/\* (.+\.xm) \*\/ *= *{.*?isa *= *PBXFileReference\b/) { print "$1\n"; }' "$pbxProjectFilePath"))
+	projectXFiles=($(perl -ne 'if ($_ =~ /\/\* (.+\.x) \*\/ *= *{.*?isa *= *PBXFileReference\b/) { print "$1\n"; }' "$pbxProjectFilePath"))
 	
 	for f in "${projectXmFiles[@]}"; do
 		echo "Logos Processor: $f -> ${f%.*}.mm..."
@@ -1500,8 +1532,18 @@ function xcodeBuildPhase_Logos() # no args
 		[[ $logosStdErr == "" ]] || \
 			panic 1 "Logos Processor outputted: $logosStdErr"
 	done
+	
+	for f in "${projectXFiles[@]}"; do
+		echo "Logos Processor: $f -> ${f%.*}.m..."
 
-	echo "Note: If any *.xm file generated above by the Logos Processor (${projectXmFiles[@]}) is not being compiled below, then you must add it to the Xcode project to be compiled."
+		logosStdErr=$(("$logosProcessor" "$PROJECT_DIR/$TARGET_NAME/$f" > "$PROJECT_DIR/$TARGET_NAME/${f%.*}.m") 2>&1) || \
+			panic $? "Failed Logos Processor"
+	
+		[[ $logosStdErr == "" ]] || \
+			panic 1 "Logos Processor outputted: $logosStdErr"
+	done
+
+	echo "Note: If any *.xm or *.x file generated above by the Logos Processor (${projectXmFiles[@]}) is not being compiled below, then you must add it to the Xcode project to be compiled."
 
 	# success #
 	echo "Xcode Build Phase for Logos Processor complete."
