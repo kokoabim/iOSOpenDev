@@ -121,6 +121,9 @@ extern NSString * const LAEventNameSpringBoardIconFlickRight;
 extern NSString * const LAEventNameDeviceLocked;
 extern NSString * const LAEventNameDeviceUnlocked;
 
+extern NSString * const LAEventNameNetworkJoinedWiFi;
+extern NSString * const LAEventNameNetworkLeftWiFi;
+
 // Icon Gestures
 extern NSString * const LAEventUserInfoDisplayIdentifier;
 extern NSString * const LAEventUserInfoIconView;

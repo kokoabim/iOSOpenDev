@@ -1,20 +1,20 @@
 /* Cydia Substrate - Powerful Code Insertion Platform
- * Copyright (C) 2008-2012  Jay Freeman (saurik)
+ * Copyright (C) 2008-2013  Jay Freeman (saurik)
 */
 
-/* GNU Lesser General Public License, Version 3 {{{ */
+/* GNU General Public License, Version 3 {{{ */
 /*
- * Substrate is free software: you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License as published by the
- * Free Software Foundation, either version 3 of the License, or (at your
- * option) any later version.
+ * Substrate is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published
+ * by the Free Software Foundation, either version 3 of the License,
+ * or (at your option) any later version.
  *
- * Substrate is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
- * License for more details.
+ * Substrate is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
+ * You should have received a copy of the GNU General Public License
  * along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
 **/
 /* }}} */
@@ -36,15 +36,13 @@ extern "C" {
 #endif
 
 #include <dlfcn.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 #define _finline \
     inline __attribute__((__always_inline__))
 #define _disused \
     __attribute__((__unused__))
-
-#define _extern \
-    extern "C" __attribute__((__visibility__("default")))
 
 #ifdef __cplusplus
 #define _default(value) = value
@@ -73,29 +71,17 @@ IMP MSHookMessage(Class _class, SEL sel, IMP imp, const char *prefix _default(NU
 void MSHookMessageEx(Class _class, SEL sel, IMP imp, IMP *result);
 #endif
 
-#ifdef SubstrateInternal
-typedef void *SubstrateAllocatorRef;
-typedef struct __SubstrateProcess *SubstrateProcessRef;
-typedef struct __SubstrateMemory *SubstrateMemoryRef;
-
-SubstrateProcessRef SubstrateProcessCreate(SubstrateAllocatorRef allocator, pid_t pid);
-void SubstrateProcessRelease(SubstrateProcessRef process);
-
-SubstrateMemoryRef SubstrateMemoryCreate(SubstrateAllocatorRef allocator, SubstrateProcessRef process, void *data, size_t size);
-void SubstrateMemoryRelease(SubstrateMemoryRef memory);
-#endif
-
 #ifdef __ANDROID__
 #include <jni.h>
-_extern void MSJavaHookClassLoad(JNIEnv *jni, const char *name, void (*callback)(JNIEnv *, jclass, void *), void *data _default(NULL));
-_extern void MSJavaHookMethod(JNIEnv *jni, jclass _class, jmethodID methodID, void *function, void **result);
-_extern void MSJavaBlessClassLoader(JNIEnv *jni, jobject loader);
+void MSJavaHookClassLoad(JNIEnv *jni, const char *name, void (*callback)(JNIEnv *, jclass, void *), void *data _default(NULL));
+void MSJavaHookMethod(JNIEnv *jni, jclass _class, jmethodID methodID, void *function, void **result);
+void MSJavaBlessClassLoader(JNIEnv *jni, jobject loader);
 
 typedef struct MSJavaObjectKey_ *MSJavaObjectKey;
-_extern MSJavaObjectKey MSJavaNewObjectKey();
-_extern void MSJavaDeleteObjectKey(MSJavaObjectKey key);
-_extern void *MSJavaGetObjectKey(JNIEnv *jni, jobject object, MSJavaObjectKey key);
-_extern void MSJavaSetObjectKey(JNIEnv *jni, jobject object, MSJavaObjectKey key, void *value, void (*clean)(void *, JNIEnv *, void *) _default(NULL), void *data _default(NULL));
+MSJavaObjectKey MSJavaCreateObjectKey();
+void MSJavaReleaseObjectKey(MSJavaObjectKey key);
+void *MSJavaGetObjectKey(JNIEnv *jni, jobject object, MSJavaObjectKey key);
+void MSJavaSetObjectKey(JNIEnv *jni, jobject object, MSJavaObjectKey key, void *value, void (*clean)(void *, JNIEnv *, void *) _default(NULL), void *data _default(NULL));
 #endif
 
 #ifdef __cplusplus
@@ -103,22 +89,6 @@ _extern void MSJavaSetObjectKey(JNIEnv *jni, jobject object, MSJavaObjectKey key
 #endif
 
 #ifdef __cplusplus
-
-#ifdef SubstrateInternal
-struct SubstrateHookMemory {
-    SubstrateMemoryRef handle_;
-
-    SubstrateHookMemory(SubstrateProcessRef process, void *data, size_t size) :
-        handle_(SubstrateMemoryCreate(NULL, NULL, data, size))
-    {
-    }
-
-    ~SubstrateHookMemory() {
-        if (handle_ != NULL)
-            SubstrateMemoryRelease(handle_);
-    }
-};
-#endif
 
 #ifdef __APPLE__
 
@@ -165,12 +135,8 @@ static inline void MSHookMessage(Class _class, SEL sel, Type_ *imp, Type_ **resu
 template <typename Type_>
 static inline Type_ &MSHookIvar(id self, const char *name) {
     Ivar ivar(class_getInstanceVariable(object_getClass(self), name));
-	#if __has_feature(objc_arc)
-	void *pointer(ivar == NULL ? NULL : reinterpret_cast<char *>((__bridge void *)self) + ivar_getOffset(ivar));
-	#else
-	void *pointer(ivar == NULL ? NULL : reinterpret_cast<char *>(self) + ivar_getOffset(ivar));
-	#endif
-	return *reinterpret_cast<Type_ *>(pointer);
+    void *pointer(ivar == NULL ? NULL : reinterpret_cast<char *>(self) + ivar_getOffset(ivar));
+    return *reinterpret_cast<Type_ *>(pointer);
 }
 
 #define MSAddMessage0(_class, type, arg0) \
@@ -218,13 +184,19 @@ static inline Type_ &MSHookIvar(id self, const char *name) {
 
 #define MSIgnore_(name, dollar, colon)
 
+#ifdef __arm64__
+#define MS_objc_msgSendSuper_stret objc_msgSendSuper
+#else
+#define MS_objc_msgSendSuper_stret objc_msgSendSuper_stret
+#endif
+
 #define MSMessage_(extra, type, _class, name, dollar, colon, call, args...) \
     static type _$ ## name ## $ ## dollar(Class _cls, type (*_old)(_class, SEL, ## args, ...), type (*_spr)(struct objc_super *, SEL, ## args, ...), _class self, SEL _cmd, ## args); \
     MSHook(type, name ## $ ## dollar, _class self, SEL _cmd, ## args) { \
         Class const _cls($ ## name); \
         type (* const _old)(_class, SEL, ## args, ...) = reinterpret_cast<type (* const)(_class, SEL, ## args, ...)>(_ ## name ## $ ## dollar); \
         typedef type (*msgSendSuper_t)(struct objc_super *, SEL, ## args, ...); \
-        msgSendSuper_t const _spr(::etl::IsClass<type>::value ? reinterpret_cast<msgSendSuper_t>(&objc_msgSendSuper_stret) : reinterpret_cast<msgSendSuper_t>(&objc_msgSendSuper)); \
+        msgSendSuper_t const _spr(::etl::IsClass<type>::value ? reinterpret_cast<msgSendSuper_t>(&MS_objc_msgSendSuper_stret) : reinterpret_cast<msgSendSuper_t>(&objc_msgSendSuper)); \
         return _$ ## name ## $ ## dollar call; \
     } \
     extra(name, dollar, colon) \
@@ -345,7 +317,9 @@ static inline void MSHookFunction(MSImageRef image, const char *name, Type_ *rep
 
 #ifdef __ANDROID__
 
-#ifdef __cplusplus
+// g++ versions before 4.7 define __cplusplus to 1
+// http://gcc.gnu.org/bugzilla/show_bug.cgi?id=1773
+#if __cplusplus >= 201103L || defined(__GXX_EXPERIMENTAL_CXX0X__)
 
 template <typename Type_, typename Kind_, typename ...Args_>
 static inline void MSJavaHookMethod(JNIEnv *jni, jclass _class, jmethodID method, Type_ (*replace)(JNIEnv *, Kind_, Args_...), Type_ (**result)(JNIEnv *, Kind_, ...)) {
@@ -357,6 +331,8 @@ static inline void MSJavaHookMethod(JNIEnv *jni, jclass _class, jmethodID method
 }
 
 #endif
+
+#ifdef __cplusplus
 
 static inline void MSAndroidGetPackage(JNIEnv *jni, jobject global, const char *name, jobject &local, jobject &loader) {
     jclass Context(jni->FindClass("android/content/Context"));
@@ -383,6 +359,8 @@ static inline jclass MSJavaFindClass(JNIEnv *jni, jobject loader, const char *na
 _disused static void MSJavaCleanWeak(void *data, JNIEnv *jni, void *value) {
     jni->DeleteWeakGlobalRef(reinterpret_cast<jweak>(value));
 }
+
+#endif
 
 #endif
 
