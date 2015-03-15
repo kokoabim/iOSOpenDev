@@ -398,16 +398,16 @@ function copyFileToDevice() # args: sourceFile, targetDir, hostAddress
 	local hostAddress="$3"
 	local targetFilePath
 	
-	ssh root@$hostAddress mkdir -p "\"$targetDir\"" || \
+	ssh -p$hostPort root@$hostAddress mkdir -p "\"$targetDir\"" || \
 		panic $? "Failed to create directory $targetDir on device $hostAddress"
 	
 	targetFilePath="$targetDir/`basename \"$sourceFile\"`" || \
 		panic $? "Failed to build target file path"
 		
-	ssh root@$hostAddress rm -f "\"$targetFilePath\"" || \
+	ssh -p$hostPort root@$hostAddress rm -f "\"$targetFilePath\"" || \
 		panic $? "Failed to remove existing file $targetFilePath on device $hostAddress"
 	
-	scp "$sourceFile" root@$hostAddress:"\"$targetFilePath\"" || \
+	scp -P$hostPort "$sourceFile" root@$hostAddress:"\"$targetFilePath\"" || \
 		panic $? "Failed to copy file $sourceFile to device $hostAddress at directory $targetDir"
 }
 
@@ -804,6 +804,13 @@ function managePackageOnDevice() # args: manageAction, packageFileOrName, hostAd
 			panic 1 "Host address not provided and environment variable iOSOpenDevDevice is not set or is empty"
 	fi
 
+    if [[ $hostPort == "" ]]; then
+
+        hostPort="$iOSOpenDevPort"
+
+        [[ $hostPort != "" ]] || hostPort="22"
+
+    fi
 	# if installing, copy package to device #
 	
 	if [[ $manageAction == "install" ]]; then
@@ -821,7 +828,7 @@ function managePackageOnDevice() # args: manageAction, packageFileOrName, hostAd
 	
 	echo "$doingWhat package `basename \"$packageFileOrName\"` $direction device $hostAddress... "
 
-	ssh root@$hostAddress "$cmdBin" $cmdArg "$packageFileOrName" || \
+	ssh -p$hostPort root@$hostAddress "$cmdBin" $cmdArg "$packageFileOrName" || \
 		panic $? "Failed."
 	
 	# success #
@@ -1256,7 +1263,7 @@ EOF
 		panic 2 "Failed to pipe echo into grep"
 	elif [[ $grepExit == 1 ]]; then
 		echo "Writing SSH authentication public key of local account $USER to device..."
-		ssh root@$hostAddress echo "$publicKey" \>\> "$authorizedKeysPath" || \
+		ssh -p$hostPort root@$hostAddress echo "$publicKey" \>\> "$authorizedKeysPath" || \
 			panic $? "Failed to append public key to $authorizedKeysPath on device $hostAddress"
 
 		echo "Password-less SSH connections can now be performed by local account
@@ -1295,7 +1302,7 @@ function runCmdOnDevice() # args: $hostAddress, ...
 			panic 1 "Host address not provided and environment variable iOSOpenDevDevice is not set or is empty"
 	fi
 	
-	ssh root@$hostAddress "$@" || \
+	ssh -p$hostPort root@$hostAddress "$@" || \
 		panic $? "Failed to run $@ on device $hostAddress"
 }
 
@@ -1315,7 +1322,7 @@ function sshToDevice() # args: $hostAddress
 			panic 1 "Host address not provided and environment variable iOSOpenDevDevice is not set or is empty"
 	fi
 	
-	ssh root@$hostAddress || \
+	ssh -p$hostPort root@$hostAddress || \
 		panic $? "Failed to SSH to device $hostAddress"
 }
 
@@ -1362,7 +1369,7 @@ function copyFromDevice() # args: hostAddress, sourceFile, targetDir
 	
 	requireDir "$targetDir" true
 
-	scp -q root@$hostAddress:"\"$sourceFile\"" "$targetDir" || \
+	scp -P$hostPort -q root@$hostAddress:"\"$sourceFile\"" "$targetDir" || \
 		panic $? "Failed to copy file $sourceFile from device $hostAddress to directory $targetDir"
 }
 
@@ -1396,7 +1403,7 @@ function runFuncOnDevice() # args: function, hostAddress
 	;;
 	esac
 	  
-	ssh root@$hostAddress $cmd || \
+	ssh -p$hostPort root@$hostAddress $cmd || \
 		panic $? "Failed to perform function $func on device $hostAddress"
 }
 
