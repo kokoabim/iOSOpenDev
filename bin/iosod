@@ -82,17 +82,23 @@ export Action_BuildPackage=("build" "[-p version_plist] [-z] package_directory o
         used to set the package's control file's Version field before building.
         If <z> is provided, a zip file is created in <output_directory> also.")
 
-export Action_InstallPackage=("install" "[-h host_address] package_file" "h:" 1 1 managePackageOnDevice false \
+export Action_InstallPackage=("install" "[-h host_address] [-p host_port] package_file" "h:p:" 1 1 managePackageOnDevice false \
 "        Install <package_file> on device at <host_address>. If <host_address> is
-        omitted, the environment variable iOSOpenDevDevice is used.")
+        omitted, the environment variable iOSOpenDevDevice is used. If <host_port>
+        is omitted, the environment variable iOSOpenDevPort is used or, if that
+        variable does not exist, the default SSH port 22 is used.")
 
-export Action_RemovePackage=("remove" "[-h host_address] package_name" "h:" 1 1 managePackageOnDevice false \
+export Action_RemovePackage=("remove" "[-h host_address] [-p host_port] package_name" "h:p:" 1 1 managePackageOnDevice false \
 "        Remove <package_name> from device at <host_address>. If <host_address>
-        is omitted, the environment variable iOSOpenDevDevice is used.")
+        is omitted, the environment variable iOSOpenDevDevice is used. If
+        <host_port> is omitted, the environment variable iOSOpenDevPort is used
+        or, if that variable does not exist, the default SSH port 22 is used.")
 
-export Action_PurgePackage=("purge" "[-h host_address] package_name" "h:" 1 1 managePackageOnDevice false \
+export Action_PurgePackage=("purge" "[-h host_address] [-p host_port] package_name" "h:p:" 1 1 managePackageOnDevice false \
 "        Purge <package_name> from device at <host_address>. If <host_address> is
-        omitted, the environment variable iOSOpenDevDevice is used.")
+        omitted, the environment variable iOSOpenDevDevice is used. If <host_port>
+        is omitted, the environment variable iOSOpenDevPort is used or, if that
+        variable does not exist, the default SSH port 22 is used.")
 
 export Action_DumpSDKHeaders=("dump" "[-i] [-z] framework_type output_directory" "iz" 2 2 dumpSDKHeaders false \
 "        Generate header files of the specified iOS SDK <framework_type> of its
@@ -163,11 +169,13 @@ export Action_RemoveCopiedHeaders=("rmheaders" "framework_type header_tag" "" 2 
         Framework type options:
             public or private")
 
-export Action_AddSshKeyToDevice=("sshkey" "[-h host_address] [-r]" "h:r" 0 0 addSshKeyToDevice false \
+export Action_AddSshKeyToDevice=("sshkey" "[-h host_address] [-p host_port] [-r]" "h:rp:" 0 0 addSshKeyToDevice false \
 "        Add the local user's public SSH authentication key as an authorized key
         to the root account of the device at <host_address>. If <host_address>
-        is omitted, the environment variable iOSOpenDevDevice is used. If <r>
-        is omitted, the current user is used. If <r> is used, root is used.
+        is omitted, the environment variable iOSOpenDevDevice is used. If
+        <host_port> is omitted, the environment variable iOSOpenDevPort is used
+        or, if that variable does not exist, the default SSH port 22 is used. If
+        <r> is omitted, the current user is used. If <r> is used, root is used.
         If the local user does not already have a SSH authentication key then
         one will be generated and the passphrase to set for it will be asked.
         Adding a user's public SSH authentication key as an authorized key will
@@ -183,13 +191,18 @@ export Action_DumpAllHeaders=("dumpall2sdk" "[-i] [-z]" "iz" 0 0 dumpAllHeaders 
         <z> is used, class-dump is used. If <i> is provided, import statements
         are not converted from \"header.h\" to <framework_name/header.h>.")
 
-export Action_RunCmdOnDevice=("run" "[-h host_address] command ..." "h:" 0 2048 runCmdOnDevice false \
+export Action_RunCmdOnDevice=("run" "[-h host_address] [-p host_port] command ..." "h:p:" 0 2048 runCmdOnDevice false \
 "        Run <command> on device at <host_address>. If <host_address> is
-        omitted, the environment variable iOSOpenDevDevice is used.")
+        omitted, the environment variable iOSOpenDevDevice is used. If
+        <host_port> is omitted, the environment variable iOSOpenDevPort is
+        used or, if that variable does not exist, the default SSH port 22
+        is used.")
 
-export Action_RunFuncOnDevice=("func" "[-h host_address] function" "h:" 1 1 runFuncOnDevice false \
+export Action_RunFuncOnDevice=("func" "[-h host_address] [-p host_port] function" "h:p:" 1 1 runFuncOnDevice false \
 "        Perform <function> on device at <host_address>. If <host_address> is
-        is omitted, the environment variable iOSOpenDevDevice is used.
+        is omitted, the environment variable iOSOpenDevDevice is used. If
+        <host_port> is omitted, the environment variable iOSOpenDevPort is used
+        or, if that variable does not exist, the default SSH port 22 is used.
 
         Available functions:
             respring, reboot")
@@ -202,14 +215,18 @@ export Action_XcodeBuildPhase=("--xcbp" "" "" 0 0 xcodeBuildPhase false \
 "        DO NOT USE. For use by Xcode as a Build Phase for projects created from
         iOSOpenDev templates only.")
 
-export Action_SshToDevice=("ssh" "[-h host_address]" "h:" 0 0 sshToDevice false \
+export Action_SshToDevice=("ssh" "[-h host_address] [-p host_port]" "h:p:" 0 0 sshToDevice false \
 "        Secure Shell (SSH) to device at <host_address>. If <host_address> is
-        omitted, the environment variable iOSOpenDevDevice is used.")
+        omitted, the environment variable iOSOpenDevDevice is used. If
+        <host_port> is omitted, the environment variable iOSOpenDevPort is used
+        or, if that variable does not exist, the default SSH port 22 is used.")
 
-export Action_UpdateIncludeAndLib=("update" "[-h host_address]" "h:" 0 0 updateIncludeAndLib false \
+export Action_UpdateIncludeAndLib=("update" "[-h host_address] [-p host_port]" "h:p:" 0 0 updateIncludeAndLib false \
 "        Update include and lib directories using device at <host_address>.
         If <host_address> is omitted, the environment variable
-        iOSOpenDevDevice is used.")
+        iOSOpenDevDevice is used. If <host_port> is omitted, the environment
+        variable iOSOpenDevPort is used or, if that variable does not exist,
+        the default SSH port 22 is used.")
 
 export Action_Help=("--help" "" "" 0 0 "" false \
 "        Show this help.")
@@ -391,11 +408,12 @@ function extractTar() # args: tarPath, outputPath
 		panic $? "Failed to extract $tarPath to $outputPath"
 }
 
-function copyFileToDevice() # args: sourceFile, targetDir, hostAddress
+function copyFileToDevice() # args: sourceFile, targetDir, hostAddress, hostPort
 {
 	local sourceFile="$1"
 	local targetDir="$2"
 	local hostAddress="$3"
+	local hostPort="$4"
 	local targetFilePath
 	
 	ssh -p$hostPort root@$hostAddress mkdir -p "\"$targetDir\"" || \
@@ -763,11 +781,12 @@ function createTarForDebianPackage() # args: sourceDir, outputDir, tarName [, op
 
 # === install, remove, purge (actions) === #
 
-function managePackageOnDevice() # args: manageAction, packageFileOrName, hostAddress
+function managePackageOnDevice() # args: manageAction, packageFileOrName, hostAddress, hostPort
 {
 	local manageAction="$1"
 	local packageFileOrName="$2"
 	local hostAddress="$3"
+	local hostPort="$4"
 	local doingWhat
 	local direction
 	local didWhat
@@ -804,13 +823,14 @@ function managePackageOnDevice() # args: manageAction, packageFileOrName, hostAd
 			panic 1 "Host address not provided and environment variable iOSOpenDevDevice is not set or is empty"
 	fi
 
-    if [[ $hostPort == "" ]]; then
+	if [[ $hostPort == "" ]]; then
 
-        hostPort="$iOSOpenDevPort"
+		hostPort="$iOSOpenDevPort"
 
-        [[ $hostPort != "" ]] || hostPort="22"
+		[[ $hostPort != "" ]] || hostPort="22"
 
-    fi
+	fi
+
 	# if installing, copy package to device #
 	
 	if [[ $manageAction == "install" ]]; then
@@ -819,7 +839,7 @@ function managePackageOnDevice() # args: manageAction, packageFileOrName, hostAd
 
 		devicePackagesDir="/var/root/iOSOpenDevPackages"
 
-		copyFileToDevice "$packageFileOrName" "$devicePackagesDir" "$hostAddress"
+		copyFileToDevice "$packageFileOrName" "$devicePackagesDir" "$hostAddress" "$hostPort"
 
 		packageFileOrName="$devicePackagesDir/`basename \"$packageFileOrName\"`"
 	fi
@@ -1199,10 +1219,11 @@ function dumpAndCopyHeaders() # args: copyWhat [, headerFileTag] [, useZOption] 
 
 # === sshkey (action) === #
 
-function addSshKeyToDevice() # args: [hostAddress] [, useROption]
+function addSshKeyToDevice() # args: [hostAddress] [, useROption] [, hostPort]
 {
 	local hostAddress="$1"
 	local useROption="$2"
+	local hostPort="$3"
 	local homeDir=`eval echo ~$USER`
 	local privateKeyPath="$homeDir/.ssh/id_rsa"
 	local publicKeyPath="$homeDir/.ssh/id_rsa.pub"
@@ -1226,6 +1247,15 @@ function addSshKeyToDevice() # args: [hostAddress] [, useROption]
 			panic 1 "Host address not provided and environment variable iOSOpenDevDevice is not set or is empty"
 	fi
 
+	if [[ $hostPort == "" ]]; then
+
+		hostPort="$iOSOpenDevPort"
+
+		[[ $hostPort != "" ]] || \
+			hostPort = 22
+
+	fi
+
 	sshKeygenBin=`which ssh-keygen` || \
 		panic $? "Failed to get ssh-keygen path"
 
@@ -1242,7 +1272,7 @@ function addSshKeyToDevice() # args: [hostAddress] [, useROption]
 
 	echo "Reading existing authorized keys from device $iOSOpenDevDevice..."
 	
-	existingAuthorizedKeys=`ssh -T root@$hostAddress << EOF
+	existingAuthorizedKeys=`ssh -p$hostPort -T root@$hostAddress << EOF
 if [[ ! -d "${authorizedKeysPath%/*}" ]]; then
 	mkdir "${authorizedKeysPath%/*}"
 	chmod 700 "${authorizedKeysPath%/*}"
@@ -1287,10 +1317,11 @@ function dumpAllHeaders() # args: [useZOption] [, useIOption]
 
 # === run (Action) === #
 
-function runCmdOnDevice() # args: $hostAddress, ...
+function runCmdOnDevice() # args: $hostAddress, [, hostPort] ...
 {
 	local hostAddress="$1"
-	shift
+	local hostPort="$2"
+	shift 2
 	
 	if [[ $hostAddress == "" ]]; then
 	
@@ -1300,6 +1331,15 @@ function runCmdOnDevice() # args: $hostAddress, ...
 		
 		[[ $hostAddress != "" ]] || \
 			panic 1 "Host address not provided and environment variable iOSOpenDevDevice is not set or is empty"
+	fi
+
+	if [[ $hostPort == "" ]]; then
+
+		hostPort="$iOSOpenDevPort"
+
+		[[ $hostPort != "" ]] || \
+			hostPort=22
+
 	fi
 	
 	ssh -p$hostPort root@$hostAddress "$@" || \
@@ -1308,9 +1348,10 @@ function runCmdOnDevice() # args: $hostAddress, ...
 
 # === ssh (Action) === #
 
-function sshToDevice() # args: $hostAddress
+function sshToDevice() # args: $hostAddress, $hostPort
 {
 	local hostAddress="$1"
+	local hostPort="$2"
 	
 	if [[ $hostAddress == "" ]]; then
 	
@@ -1322,15 +1363,25 @@ function sshToDevice() # args: $hostAddress
 			panic 1 "Host address not provided and environment variable iOSOpenDevDevice is not set or is empty"
 	fi
 	
+	if [[ $hostPort == "" ]]; then
+
+		hostPort="$iOSOpenDevPort"
+
+		[[ $hostPort != "" ]] || \
+			hostPort=22
+
+	fi
+
 	ssh -p$hostPort root@$hostAddress || \
 		panic $? "Failed to SSH to device $hostAddress"
 }
 
 # === update (Action) === #
 
-function updateIncludeAndLib() # args: $hostAddress
+function updateIncludeAndLib() # args: $hostAddress, $hostPort
 {
 	local hostAddress="$1"
+	local hostPort="$2"
 	
 	if [[ $hostAddress == "" ]]; then
 	
@@ -1341,31 +1392,41 @@ function updateIncludeAndLib() # args: $hostAddress
 		[[ $hostAddress != "" ]] || \
 			panic 1 "Host address not provided and environment variable iOSOpenDevDevice is not set or is empty"
 	fi
+
+	if [[ $hostPort == "" ]]; then
+
+		hostPort="$iOSOpenDevPort"
+
+		[[ $hostPort != "" ]] || \
+			hostPort=22
+
+	fi
 	
 	# include
 	
 	echo "Updating include files..."
 	
-	copyFromDevice $hostAddress "/usr/include/ActionMenu/ActionMenu.h" "$iOSOpenDevPath/include/ActionMenu"
-	copyFromDevice $hostAddress "/usr/include/SiriObjects.h" "$iOSOpenDevPath/include/AssistantExtensions"
+	copyFromDevice $hostAddress "/usr/include/ActionMenu/ActionMenu.h" "$iOSOpenDevPath/include/ActionMenu" "$hostPort"
+	copyFromDevice $hostAddress "/usr/include/SiriObjects.h" "$iOSOpenDevPath/include/AssistantExtensions" "$hostPort"
 	downloadFile "https://raw.github.com/rpetrich/CaptainHook/master/CaptainHook.h" "$iOSOpenDevPath/include/CaptainHook/CaptainHook.h"
-	copyFromDevice $hostAddress "/usr/include/libactivator/libactivator.h" "$iOSOpenDevPath/include/libactivator"
-	copyFromDevice $hostAddress "/usr/include/substrate.h" "$iOSOpenDevPath/include"
+	copyFromDevice $hostAddress "/usr/include/libactivator/libactivator.h" "$iOSOpenDevPath/include/libactivator" "$hostPort"
+	copyFromDevice $hostAddress "/usr/include/substrate.h" "$iOSOpenDevPath/include" "$hostPort"
 	
 	# lib	
 
 	echo "Updating lib files..."
 
-	copyFromDevice $hostAddress "/usr/lib/libactionmenu.dylib" "$iOSOpenDevPath/lib"
-	copyFromDevice $hostAddress "/usr/lib/libactivator.dylib" "$iOSOpenDevPath/lib"
-	copyFromDevice $hostAddress "/usr/lib/libsubstrate.dylib" "$iOSOpenDevPath/lib"
+	copyFromDevice $hostAddress "/usr/lib/libactionmenu.dylib" "$iOSOpenDevPath/lib" "$hostPort"
+	copyFromDevice $hostAddress "/usr/lib/libactivator.dylib" "$iOSOpenDevPath/lib" "$hostPort"
+	copyFromDevice $hostAddress "/usr/lib/libsubstrate.dylib" "$iOSOpenDevPath/lib" "$hostPort"
 }
 
-function copyFromDevice() # args: hostAddress, sourceFile, targetDir
+function copyFromDevice() # args: hostAddress, sourceFile, targetDir, hostPort
 {
 	local hostAddress="$1"
 	local sourceFile="$2"
 	local targetDir="$3"
+	local hostPort="$4"
 	
 	requireDir "$targetDir" true
 
@@ -1375,10 +1436,11 @@ function copyFromDevice() # args: hostAddress, sourceFile, targetDir
 
 # === func (Action) === #
 
-function runFuncOnDevice() # args: function, hostAddress
+function runFuncOnDevice() # args: function, hostAddress, hostPort
 {
 	local func="$1"
 	local hostAddress="$2"
+	local hostPort="$3"
 	local cmd
 		
 	if [[ $hostAddress == "" ]]; then
@@ -1389,6 +1451,15 @@ function runFuncOnDevice() # args: function, hostAddress
 		
 		[[ $hostAddress != "" ]] || \
 			panic 1 "Host address not provided and environment variable iOSOpenDevDevice is not set or is empty"
+	fi
+
+	if [[ $hostPort == "" ]]; then
+
+		hostPort="$iOSOpenDevPort"
+
+		[[ $hostPort != "" ]] || \
+			hostPort=22
+
 	fi
 	
 	case "$func" in
@@ -1609,6 +1680,16 @@ function xcodeBuildPhase() # no args
 	[[ $iOSOpenDevDevice != "" ]] || \
 		iOSOpenDevDevice=`getBashProfileEnvVarValue "iOSOpenDevDevice"`
 
+	# if build setting iOSOpenDevPort is empty, try to get it from user's profile
+	# or, if that fails, use the default value of 22
+
+	[[ $iOSOpenDevPort != "" ]] || \
+		iOSOpenDevPort=`getBashProfileEnvVarValue "iOSOpenDevPort"`
+
+	[[ $iOSOpenDevPort != "" ]] || \
+		iOSOpenDevPort=22
+
+
 	# verify requirements #
 	requireFile "$builtExecutable" false
 	requireDir "$packageDirectory"
@@ -1651,7 +1732,7 @@ function xcodeBuildPhase() # no args
 	if [[ "$iOSOpenDevCopyOnBuild" == "YES" ]]; then
 	
 		if [[ "$iOSOpenDevDevice" != "" ]]; then
-			copyFileToDevice "$builtExecutable" "/var/root/iOSOpenDevBuilds/$PROJECT_NAME" "$iOSOpenDevDevice"
+			copyFileToDevice "$builtExecutable" "/var/root/iOSOpenDevBuilds/$PROJECT_NAME" "$iOSOpenDevDevice" "$iOSOpenDevPort"
 		else
 			# build setting iOSOpenDevDevice is empty #
 			panic 1 "Unable to copy executable to device since build setting iOSOpenDevDevice is not set or is empty and it is not exported in your Bash personal initialization file"
@@ -1697,12 +1778,12 @@ function xcodeBuildPhase() # no args
 						packageFileName="`getPackageFileNameUsingControlFile \"$packageDirectory/DEBIAN/control\"`.deb"
 							
 						# install package on device #					
-						managePackageOnDevice "install" "$allPackagesDir/$packageFileName" "$iOSOpenDevDevice"
+						managePackageOnDevice "install" "$allPackagesDir/$packageFileName" "$iOSOpenDevDevice" "$iOSOpenDevPort"
 						
 						# respring? #
 						if [[ "$iOSOpenDevRespringOnInstall" == "YES" ]]; then
 							echo "Respringing device..."
-							runFuncOnDevice "respring" "$iOSOpenDevDevice"
+							runFuncOnDevice "respring" "$iOSOpenDevDevice" "$iOSOpenDevPort" 
 						fi
 					else
 						# build setting iOSOpenDevDevice is empty #
@@ -1819,13 +1900,13 @@ case "${activeActionArg[$ActionProperty_ShortArg]}" in
 		"${activeActionArg[$ActionProperty_Function]}" "$@" "$Opt_p" "$Opt_z"
 	;;
 	${Action_InstallPackage[$ActionProperty_ShortArg]})
-		"${activeActionArg[$ActionProperty_Function]}" "install" "$@" "$Opt_h"
+		"${activeActionArg[$ActionProperty_Function]}" "install" "$@" "$Opt_h" "$Opt_p"
 	;;
 	${Action_RemovePackage[$ActionProperty_ShortArg]})
-		"${activeActionArg[$ActionProperty_Function]}" "remove" "$@" "$Opt_h"
+		"${activeActionArg[$ActionProperty_Function]}" "remove" "$@" "$Opt_h" "$Opt_p"
 	;;
 	${Action_PurgePackage[$ActionProperty_ShortArg]})
-		"${activeActionArg[$ActionProperty_Function]}" "purge" "$@" "$Opt_h"
+		"${activeActionArg[$ActionProperty_Function]}" "purge" "$@" "$Opt_h" "$Opt_p"
 	;;
 	${Action_DumpSDKHeaders[$ActionProperty_ShortArg]})
 		"${activeActionArg[$ActionProperty_Function]}" "$@" "$Opt_z" "$Opt_i"
@@ -1840,25 +1921,25 @@ case "${activeActionArg[$ActionProperty_ShortArg]}" in
 		"${activeActionArg[$ActionProperty_Function]}" "$@"
 	;;
 	${Action_AddSshKeyToDevice[$ActionProperty_ShortArg]})
-		"${activeActionArg[$ActionProperty_Function]}" "$Opt_h" "$Opt_r"
+		"${activeActionArg[$ActionProperty_Function]}" "$Opt_h" "$Opt_r" "$Opt_p"
 	;;
 	${Action_DumpAllHeaders[$ActionProperty_ShortArg]})
 		"${activeActionArg[$ActionProperty_Function]}" "$Opt_z" "$Opt_i"
 	;;
 	${Action_RunCmdOnDevice[$ActionProperty_ShortArg]})
-		"${activeActionArg[$ActionProperty_Function]}" "$Opt_h" "$@"
+		"${activeActionArg[$ActionProperty_Function]}" "$Opt_h" "$Opt_p" "$@"
 	;;
 	${Action_RunFuncOnDevice[$ActionProperty_ShortArg]})
-		"${activeActionArg[$ActionProperty_Function]}" "$@" "$Opt_h"
+		"${activeActionArg[$ActionProperty_Function]}" "$@" "$Opt_h" "$Opt_p"
 	;;
 	${Action_XcodeBuildPhase[$ActionProperty_ShortArg]})
 		"${activeActionArg[$ActionProperty_Function]}"
 	;;
 	${Action_SshToDevice[$ActionProperty_ShortArg]})
-		"${activeActionArg[$ActionProperty_Function]}" "$Opt_h"
+		"${activeActionArg[$ActionProperty_Function]}" "$Opt_h" "$Opt_p"
 	;;
 	${Action_UpdateIncludeAndLib[$ActionProperty_ShortArg]})
-		"${activeActionArg[$ActionProperty_Function]}" "$Opt_h"
+		"${activeActionArg[$ActionProperty_Function]}" "$Opt_h" "$Opt_p"
 	;;
 	${Action_XcodeBuildPhaseLogos[$ActionProperty_ShortArg]})
 		"${activeActionArg[$ActionProperty_Function]}"
