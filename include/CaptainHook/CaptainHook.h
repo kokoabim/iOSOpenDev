@@ -699,7 +699,7 @@ static void *CHIvar_(id object, const char *name)
 #define CHPrimitiveProperty(class, type, getter, setter, default) \
 	CHDeclareProperty(class, getter) \
 	CHOptimizedMethod0(new, type, class, getter) { \
-		CHPrimitivePropertyGetValue( class , getter , type , val , default ) \
+		CHPrimitivePropertyGetValue( class , getter , type , val , default ); \
 		return val; \
 	} \
 	CHOptimizedMethod1(new, void, class, setter, type, getter) { \
