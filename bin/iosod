@@ -48,7 +48,7 @@ unset LANG
 
 # development tools #
 
-xcodeAsAppPath="/Applications/Xcode.app/Contents/Developer"
+xcodeAsAppPath=`xcode-select -p`
 [[ ! -d "$xcodeAsAppPath" ]] || \
 	export DEVELOPER_DIR="$xcodeAsAppPath"
 
