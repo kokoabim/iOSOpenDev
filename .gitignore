@@ -7,4 +7,7 @@
 .DocumentRevisions-V100
 .Spotlight-V100
 .vol
-Icon
+Icon
+frameworks
+include/SpringBoard
+templates
