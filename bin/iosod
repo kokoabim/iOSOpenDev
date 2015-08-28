@@ -1252,8 +1252,7 @@ function addSshKeyToDevice() # args: [hostAddress] [, useROption] [, hostPort]
 		hostPort="$iOSOpenDevPort"
 
 		[[ $hostPort != "" ]] || \
-			hostPort = 22
-
+			hostPort=22
 	fi
 
 	sshKeygenBin=`which ssh-keygen` || \
