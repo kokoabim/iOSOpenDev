@@ -708,12 +708,11 @@ function buildPackage() # args: packageDir, outputDir, versionPList [, useZOptio
 	# determine package name #
 
 	packageName=`getPackageFileNameUsingControlFile "$packageDir/DEBIAN/control"`
-
+		
 	# create package #
 
-	
 	createDebianPackage "$packageDir" "$packageName" "$outputDir"
-
+	
 	# create zip #
 	
 	if [[ $useZOption == "true" ]]; then
@@ -746,26 +745,18 @@ function createDebianPackage() # args: sourceDir, packageName [, outputDir]
 	
 	local packageFile="${outputDir:-.}/$packageName.deb"
 	
-	echo -n "Building package $packageFile... "
-	
-	# echo -n "Building package $packageName... "
+	echo -n "Building package $packageFileName... "
 
-	# echo -n "Building outputDir $outputDir... "
-
-	# echo -n "Building sourceDir $sourceDir... "
-
-	dpkg-deb -b -Zgzip "$sourceDir" "$packageFile" &> /dev/null || \
-
-	# local tempDir="`getTempDir`"
+	local tempDir="`getTempDir`"
 	
-	# createTarForDebianPackage "$sourceDir/DEBIAN" "$tempDir" "control" "-n"
-	# createTarForDebianPackage "$sourceDir" "$tempDir" "data" "--exclude" "DEBIAN/*" "--exclude" "DEBIAN"
+	createTarForDebianPackage "$sourceDir/DEBIAN" "$tempDir" "control" "-n"
+	createTarForDebianPackage "$sourceDir" "$tempDir" "data" "--exclude" "DEBIAN/*" "--exclude" "DEBIAN"
 	
-	# echo "2.0" > "$tempDir/debian-binary" || \
-	# 	panic $? "Failed to create debian-binary file"
+	echo "2.0" > "$tempDir/debian-binary" || \
+		panic $? "Failed to create debian-binary file"
 	
-	# ar -rc "$packageFile" "$tempDir/debian-binary" "$tempDir/control.tar.gz" "$tempDir/data.tar.gz" || \
-	# 	panic $? "Failed to create Debian archive"
+	ar -rc "$packageFile" "$tempDir/debian-binary" "$tempDir/control.tar.gz" "$tempDir/data.tar.gz" || \
+		panic $? "Failed to create Debian archive"
 
 	echo "Done."
 }
@@ -1477,9 +1468,6 @@ function runFuncOnDevice() # args: function, hostAddress, hostPort
 	respring)
 		cmd="killall SpringBoard"
 	;;
-	killprocess)
-		cmd="killall $iOSOpenDevKillProcess"
-	;;
 	*)
 		panic $? "Invalid function: $func"
 	;;
@@ -1506,22 +1494,15 @@ function runKillProcessFuncOnDevice() # args: function, process, hostAddress, ho
 		[[ $hostAddress != "" ]] || \
 			panic 1 "Host address not provided and environment variable iOSOpenDevDevice is not set or is empty"
 	fi
-
 	if [[ $hostPort == "" ]]; then
-
 		hostPort="$iOSOpenDevPort"
-
 		[[ $hostPort != "" ]] || \
 			hostPort=22
-
 	fi
 	
 	case "$func" in
 	reboot)
 		cmd="reboot"
-	;;
-	respring)
-		cmd="killall SpringBoard"
 	;;
 	killprocess)
 		cmd="killall $process"
@@ -1838,9 +1819,11 @@ function xcodeBuildPhase() # no args
 						managePackageOnDevice "install" "$allPackagesDir/$packageFileName" "$iOSOpenDevDevice" "$iOSOpenDevPort"
 						
 						# respring? #
+						
 						if [[ "$iOSOpenDevKillProcess" != "" ]]; then
 							runKillProcessFuncOnDevice "killprocess" "$iOSOpenDevKillProcess" "$iOSOpenDevDevice" "$iOSOpenDevPort" 
 						fi
+						
 						if [[ "$iOSOpenDevRespringOnInstall" == "YES" ]]; then
 							echo "Respringing device..."
 							runFuncOnDevice "respring" "$iOSOpenDevDevice" "$iOSOpenDevPort" 
