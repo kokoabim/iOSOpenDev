@@ -749,14 +749,19 @@ function createDebianPackage() # args: sourceDir, packageName [, outputDir]
 
 	local tempDir="`getTempDir`"
 	
-	createTarForDebianPackage "$sourceDir/DEBIAN" "$tempDir" "control" "-n"
-	createTarForDebianPackage "$sourceDir" "$tempDir" "data" "--exclude" "DEBIAN/*" "--exclude" "DEBIAN"
-	
-	echo "2.0" > "$tempDir/debian-binary" || \
-		panic $? "Failed to create debian-binary file"
-	
-	ar -rc "$packageFile" "$tempDir/debian-binary" "$tempDir/control.tar.gz" "$tempDir/data.tar.gz" || \
-		panic $? "Failed to create Debian archive"
+	#
+	# changed by redbearder 20160831 for fixing Profiling Jailbreak Project .nib no such file issue in Xcode7 
+	#
+	# createTarForDebianPackage "$sourceDir/DEBIAN" "$tempDir" "control" "-n" 
+        # createTarForDebianPackage "$sourceDir" "$tempDir" "data" "--exclude" "DEBIAN/*" "--exclude" "DEBIAN"
+     
+        # echo "2.0" > "$tempDir/debian-binary" || \ 
+        #       panic $? "Failed to create debian-binary file"
+     
+        # ar -rc "$packageFile" "$tempDir/debian-binary" "$tempDir/control.tar.gz" "$tempDir/data.tar.gz" || \ 
+        #       panic $? "Failed to create Debian archive"
+
+        /opt/local/bin/dpkg-deb -b -Zgzip "$sourceDir" "$packageFile"
 
 	echo "Done."
 }
