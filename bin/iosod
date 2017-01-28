@@ -332,6 +332,16 @@ function copyFile() # args: sourceFile, targetDirOrFile
 		panic $? "Failed to copy file $sourceFile to $targetDirOrFile"
 }
 
+function copyDir() # args: sourceDir, targetDir
+{
+	local sourceDir="$1"
+	local targetDir="$2"
+
+	requireDir "$targetDir" true
+
+	cp -rf "$sourceDir" "$targetDir" || \
+		panic $? "Failed to copy file $sourceDir to $targetDir"
+}
 function changeMode() # args: mode, target
 {
 	local mode="$1"
@@ -658,6 +668,19 @@ function getPackageFileNameUsingControlFile() # args: controlFile
 	echo "${pkgId}_${pkgVer}_${pkgArch}"
 }
 
+function getTweakNameUsingControlFile() # args: controlFile
+{
+	$setCmd
+	
+	local controlFile="$1"
+	local pkgNm
+		
+	pkgNm=`getControlFieldValue "$controlFile" Name true`
+
+	# return #
+	echo "${pkgNm}"
+}
+
 function buildPackage() # args: packageDir, outputDir, versionPList [, useZOption]
 {
 	local packageDir="$1"
@@ -670,6 +693,8 @@ function buildPackage() # args: packageDir, outputDir, versionPList [, useZOptio
 	local packageName
 	local zipFileName
 	
+	
+
 	echo "Preparing to build package..."
 	
 	# verify arguments #
@@ -677,6 +702,13 @@ function buildPackage() # args: packageDir, outputDir, versionPList [, useZOptio
 	requireDir "$packageDir"
 
 	requireDir "$outputDir" true
+
+	
+	local allResourcesDir="$PROJECT_DIR/$TARGET_NAME/Resources"
+	
+	tweakName=`getTweakNameUsingControlFile "$packageDir/DEBIAN/control"`
+
+	copyDir "$allResourcesDir/" "$packageDir/Library/Application Support/$tweakName/$tweakName.bundle/"
 
 	[[ "$versionPList" == "" ]] || \
 		requireFile "$versionPList" false
