@@ -1,5 +1,5 @@
 ### iOSOpenDev—iOS Open Development
-Copyright (c) 2012-2013 Spencer W.S. James (Kokoabim).
+Copyright (c) 2012-2015 Spencer James (Kokoabim).
 
 * Follow [@kokoabim](https://twitter.com/kokoabim)
 * Download [http://iOSOpenDev.com](http://iOSOpenDev.com)
