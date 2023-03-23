@@ -205,7 +205,7 @@ export Action_RunFuncOnDevice=("func" "[-h host_address] [-p host_port] function
         or, if that variable does not exist, the default SSH port 22 is used.
 
         Available functions:
-            respring, reboot")
+            respring, reboot, uicache")
 
 export Action_XcodeBuildPhaseLogos=("--xcbp-logos" "" "" 0 0 xcodeBuildPhase_Logos false \
 "        DO NOT USE. For use by Xcode as a Build Phase for projects created from
@@ -1468,6 +1468,9 @@ function runFuncOnDevice() # args: function, hostAddress, hostPort
 	respring)
 		cmd="killall SpringBoard"
 	;;
+	uicache)
+		cmd="su mobile -c uicache"
+	;;
 	*)
 		panic $? "Invalid function: $func"
 	;;
@@ -1779,6 +1782,12 @@ function xcodeBuildPhase() # no args
 						# install package on device #					
 						managePackageOnDevice "install" "$allPackagesDir/$packageFileName" "$iOSOpenDevDevice" "$iOSOpenDevPort"
 						
+						# clear uicache? #
+						if [[ "$iOSOpenDevClearUiCacheOnInstall" == "YES" ]]; then
+							echo "Clearing uicache device..."
+							runFuncOnDevice "uicache" "$iOSOpenDevDevice"
+						fi
+
 						# respring? #
 						if [[ "$iOSOpenDevRespringOnInstall" == "YES" ]]; then
 							echo "Respringing device..."
